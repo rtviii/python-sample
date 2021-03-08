@@ -375,8 +375,8 @@ t6=[]
 for it in range(int(1e6)):
     """Crank the BD process."""
     # if not (it % 0x3e8): print(it);
-    birth_death_event(population_proper)
     t6.append(population_proper.typecount_dict[6])
+    birth_death_event(population_proper)
 
 with open(f'batch3_#{sim_instance}.csv', 'w',newline='') as filein:
     writer = csv.writer(filein)
