@@ -13,3 +13,9 @@
 # Time profiling
 
 
+
+---------------
+
+## March 18:
+
+n_traits was left hardcoded in mutation_duplicate. Scrap everything earlier and use the new Individ_T.py

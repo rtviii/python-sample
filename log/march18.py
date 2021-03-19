@@ -28,13 +28,13 @@ shifting_landscape_flag  =  bool(args.shifting_landscape)
 toplot                   =  bool(args.toplot)
 outdir                   =  str(args.outdir)
 
-
 MUTATION_RATE_ALLELE          =  0.001
 MUTATION_VARIANTS_ALLELE      =  np.arange(-0.5,0.5005,0.005)
 MUTATION_RATE_DUPLICATION     =  0.1
 MUTATION_RATE_CONTRIB_CHANGE  =  0.1
 DEGREE                        =  1
 SHIFTING_FITNESS_PEAK         =  False or shifting_landscape_flag
+
 INDIVIDUAL_INITS              =  {   "1.1":{
         'trait_n' :3,
         'alleles'       :  np.array([1, 1, 0]),
