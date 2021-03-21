@@ -39,7 +39,7 @@ outdir                   =  str(args.outdir)
 verbose                  =  bool(args.verbose)
 
 
-MUTATION_RATE_ALLELE          =  0.001
+MUTATION_RATE_ALLELE          =  0.1
 MUTATION_VARIANTS_ALLELE      =  np.arange(-1,1,0.01)
 MUTATION_RATE_DUPLICATION     =  0
 MUTATION_RATE_CONTRIB_CHANGE  =  0
@@ -96,8 +96,8 @@ INDIVIDUAL_INITS              =  {
    }
 }
 
-def FITMAP(x,std:float=0.5, height:float=1, peak:float=0):
-    return height*(2.71**(-(np.sum(((x - peak)**2)/(2*std**2)))))
+def FITMAP(x,std:float=1, height:float=1, peak:float=0):
+    return height*math.exp(-(np.sum(((x - peak)**2)/(2*std**2))))
 
 class GPMap():
 
@@ -183,7 +183,7 @@ class Population:
             fitness_total         =  np.sum(fitness_values)
 
             self.average_fitness  =  fitness_total / self.poplen
-            self.brate  =  ( self.average_fitness )/( self.average_fitness + self.poplen * 0.00035 )
+            self.brate  =  ( self.average_fitness )/( self.average_fitness + self.poplen * 0.0008 )
             self.drate  =  1 - self.brate
 
     def birth_death_event(self,current_iteration:int,)->None:
@@ -191,7 +191,7 @@ class Population:
         fitness_values        =  [*map(lambda individ: individ.fitness, self.population)]
         fitness_total         =  np.sum(fitness_values)
         self.average_fitness  =  fitness_total / self.poplen
-        self.brate            =  ( self.average_fitness )/( self.average_fitness + self.poplen * 0.00035 )
+        self.brate            =  ( self.average_fitness )/( self.average_fitness + self.poplen * 0.0008 )
         self.drate            =  1 - self.brate
 
         normalized_fitness  =  [*map(lambda x : x / fitness_total, fitness_values) ]
@@ -340,10 +340,9 @@ def createIdividual(dicttype:str, ind_type)->Individ_T:
     gpmap.coef_init(custom_coeffs=inits['coefficients'])
     return Individ_T(inits['alleles'], gpmap,ind_type)
 
-#-⋯⋯⋅⋱⋰⋆⋅⋅⋄⋅⋅∶⋅⋅⋄▫▪▭┈┅✕⋅⋅⋄⋅⋅✕∶⋅⋅⋄⋱⋰⋯⋯⋯⋯⋅⋱⋱⋰⋆⋅⋅⋄⋅⋅∶⋅⋅⋄▫▪▭┈┅✕⋅⋅⋄⋅⋅✕∶⋅⋅⋄⋱⋰⋯⋯⋯⋅⋱⋰⋆⋅⋅⋄⋅⋅∶⋅⋅⋄▫▪▭┈┅✕⋅⋅⋄⋅⋅✕∶⋅⋅⋄⋱⋰⋯⋯⋯⋰⋆⋅⋅⋄⋅⋅∶⋅⋅⋄▫▪▭┈┅✕⋅⋅⋄⋅⋅✕∶⋅⋅⋄⋱⋰⋯⋯⋯⋅⋱⋰⋆⋅⋅⋄⋅⋅∶⋅⋅⋄▫▪▭┈┅✕⋅⋅⋄⋅⋅✕∶⋅⋅⋄⋱⋰⋯⋯⋯
 
 POPULATION = [ ]
-for _ in range(4):
+for _ in range(800):
     POPULATION.append(createIdividual("1.2",1))
 population_proper  =  Population(initial_population=POPULATION)
 t1       =  []
