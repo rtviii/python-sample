@@ -1,113 +1,51 @@
 from __future__ import annotations
 from functools import reduce
-import time
-from operator import xor
-import csv
-import sys, os
+import sys, os,json,csv,math, argparse,time
 import numpy as np
 from typing import  Callable, List
-import math
-import argparse
+import pandas as pd
+import matplotlib.pyplot as plt
 
 def dir_path(string):
-    if os.path.isdir(string):
+    if os.path.isdir(string):        return string
+    else:raise NotADirectoryError(string)
+
+def f_path(string):
+    if os.path.isfile(string):
         return string
     else:
-        raise NotADirectoryError(string)
+        raise FileNotFoundError(string)
+
+
 parser = argparse.ArgumentParser(description='Simulation presets')
 parser.add_argument('--outdir', type=dir_path, help="""Specify the path to write the results of the simulation.""")
 parser.add_argument("-it", "--itern", type=int, help="The number of iterations")
 parser.add_argument("-sim", "--siminst", type=int, help="Simulation tag for the current instance.")
 parser.add_argument("-SFL", "--shifting_landscape", type=int, choices=[0,1], help="Flag for whether the fitness landscape changes or not.")
+parser.add_argument("-V", "--verbose", type=int, choices=[0,1])
 parser.add_argument("-plt", "--toplot", type=int, choices=[0,1], help="Flag for whether the fitness landscape changes or not.")
+parser.add_argument("-params", "--parameters_file", type=f_path)
 
 args                     =  parser.parse_args()
-itern                    =  int(args.itern)
-instance                 =  int(args.siminst)
-shifting_landscape_flag  =  bool(args.shifting_landscape)
-toplot                   =  bool(args.toplot)
-outdir                   =  str(args.outdir)
+itern                    =  int(args.itern) or 50
+instance                 =  int(args.siminst or 0)
+shifting_landscape_flag  =  bool(args.shifting_landscape  or 0)
+toplot                   =  bool(args.toplot or 0)
+outdir                   =  str(args.outdir) 
+params                   =  str(args.parameters_file) 
+verbose                  =  bool(args.verbose or 0)
 
-MUTATION_RATE_ALLELE          =  0.001
-MUTATION_VARIANTS_ALLELE      =  np.arange(-0.5,0.5005,0.005)
-MUTATION_RATE_DUPLICATION     =  0.1
-MUTATION_RATE_CONTRIB_CHANGE  =  0.1
+MUTATION_VARIANTS_ALLELE      =  np.arange(-1,1,0.01)
 DEGREE                        =  1
 SHIFTING_FITNESS_PEAK         =  False or shifting_landscape_flag
 
-INDIVIDUAL_INITS              =  {   "1.1":{
-        'trait_n' :3,
-        'alleles'       :  np.array([1, 1, 0]),
-        'coefficients'  :  np.array([
-                        [1,0,0],
-                        [0,1,0],
-                        [0,0,1],
-                    ])
-   },
-   "1.2":{
-        'trait_n' :2,
-        'alleles'       :  np.array([0.5, 0.5]),
-        'coefficients'  :  np.array([
-                        [1,0],
-                        [0,1]])
-   },
-   "1.4":{
-        'trait_n' :4,
-        'alleles'       :  np.array([1,1,1,1]),
-        'coefficients'  :  np.array([
-                        [1,0,0,0],
-                        [0,1,0,0],
-                        [0,0,1,0],
-                        [0,0,0,1],
-                    ])
-   },
-   "2":{
-       'trait_n':3,
-        'alleles'       :  np.array([1, 0, 0, 0 ,1 ,0 , 0,0,0]),
-        'coefficients'  :  np.array([
-                        [1,1,1,0,0,0,0,0,0],
-                        [0,0,0,1,1,1,0,0,0],
-                        [0,0,0,0,0,0,1,1,1],
-                    ])
+with open(params) as f:
+  params = json.load(f)
+  print(params)
 
-   },
-   "3":{
-       "trait_n":3,
-        'alleles'       :  np.array([1, 0, 0, 1]),
-        'coefficients'  :  np.array([
-                        [1,0,0,1],
-                        [0,1,0,1],
-                        [0,0,1,1],
-                    ])
 
-   },
-   "4":{
-   },
-   "5":{"trait_n":4,
-        'alleles'       :  np.array([1, 0,1]),
-        'coefficients'  :  np.array([
-                        [1,0,0],
-                        [0,1,0],
-                        [0,0,1],
-                        [1,1,1],
-                        ])
-
-   },
-   "6":{
-       "trait_n"          :  4,
-        'alleles'       :  np.array([0.5,0]),
-        'coefficients'  :  np.array([
-                            [1,0],
-                            [1,0],
-                            [0,1],
-                            [0,1],
-                            ])
-   }
-}
-
-def FITMAP(x,std:float=0.05, height:float=10, peak:float=0):
+def FITMAP(x,std:float=1, height:float=1, peak:float=0):
     return height*math.exp(-(sum(((x - peak)**2)/(2*std**2))))
-
 
 class GPMap():
 
@@ -175,6 +113,8 @@ class Population:
         self.average_fitness:float          = 0
         self.brate: float                   = 0
         self.drate: float                   = 0
+        #! Fecundity 
+        #! Mortality (defined anew on slide18)
 
         if len(initial_population) != 0:
             ind:Individ_T
@@ -189,20 +129,14 @@ class Population:
             self.poplen = reduce(lambda x,y: x+y, list(self.typecount_dict.values()))
             fitness_values        =  [*map(lambda individ: individ.fitness, self.population)]
             fitness_total         =  np.sum(fitness_values)
+
             self.average_fitness  =  fitness_total / self.poplen
-
-            self.brate               =  ( self.average_fitness )/( self.average_fitness + self.poplen * 0.01 )
-            self.drate               =  ( self.poplen * 0.01 ) / (self.average_fitness + self.poplen*0.01)
-
+            self.brate  =  ( self.average_fitness )/( self.average_fitness + self.poplen * 0.001 )
+            self.drate  =  1 - self.brate
 
     def birth_death_event(self,current_iteration:int,peak_val:int)->None:
 
-        # Have to add to fitness total for each individual.
-        # major gains here with reducing the updates
-        # alternative to normalized picking too
-
         if not current_iteration % 8192 and SHIFTING_FITNESS_PEAK:
-            print("recalculated")
             for individual in self.population:
                 individual.calculate_fitness(peak_val)
 
@@ -210,13 +144,16 @@ class Population:
         fitness_total         =  np.sum(fitness_values)
 
         self.average_fitness  =  fitness_total / self.poplen
-
-        self.brate            =  ( self.average_fitness )/( self.average_fitness + self.poplen * 0.01 )
-        self.drate            =  ( self.poplen * 0.01 ) / (self.average_fitness + self.poplen*0.01)
+        self.brate            =  ( self.average_fitness )/( self.average_fitness + self.poplen * 0.001 )
+        self.drate            =  1 - self.brate
         
-
         normalized_fitness  =  [*map(lambda x : x / fitness_total, fitness_values) ]
+        # print("bdrat -<>---",self.brate,self.drate)
         event               =  np.random.choice([1, -1], p=[self.brate, self.drate])
+
+        if verbose:
+            print("Chose event {}. With {} | {}".format(event, self.brate, self.drate))
+
 
         if event > 0:
             chosen:Individ_T =  np.random.choice(self.population, p=normalized_fitness)
@@ -259,8 +196,10 @@ class Individ_T:
 
     def calculate_fitness(self,peak:int) -> float:
         """A single individual's fitness."""
-
         self.fitness= FITMAP(self.phenotype, peak=peak)
+
+        if verbose:
+            print("calculated fitness", self.fitness)
         return self.fitness
 
 
@@ -353,40 +292,39 @@ class Individ_T:
         population.remove_dead(self.ind_type,self)
 
 
-
-
-
-
 def createIdividual(dicttype:str, ind_type)->Individ_T:
     inits  =  INDIVIDUAL_INITS[dicttype]
     gpmap  =  GPMap(inits['alleles'],inits['trait_n'], DEGREE);
     gpmap.coef_init(custom_coeffs=inits['coefficients'])
     return Individ_T(inits['alleles'], gpmap,ind_type, fitness_peak=0)
 
-
 #-⋯⋯⋅⋱⋰⋆⋅⋅⋄⋅⋅∶⋅⋅⋄▫▪▭┈┅✕⋅⋅⋄⋅⋅✕∶⋅⋅⋄⋱⋰⋯⋯⋯⋯⋅⋱⋱⋰⋆⋅⋅⋄⋅⋅∶⋅⋅⋄▫▪▭┈┅✕⋅⋅⋄⋅⋅✕∶⋅⋅⋄⋱⋰⋯⋯⋯⋅⋱⋰⋆⋅⋅⋄⋅⋅∶⋅⋅⋄▫▪▭┈┅✕⋅⋅⋄⋅⋅✕∶⋅⋅⋄⋱⋰⋯⋯⋯⋰⋆⋅⋅⋄⋅⋅∶⋅⋅⋄▫▪▭┈┅✕⋅⋅⋄⋅⋅✕∶⋅⋅⋄⋱⋰⋯⋯⋯⋅⋱⋰⋆⋅⋅⋄⋅⋅∶⋅⋅⋄▫▪▭┈┅✕⋅⋅⋄⋅⋅✕∶⋅⋅⋄⋱⋰⋯⋯⋯
 
 POPULATION = [ ]
-for _ in range (800):
-    POPULATION.append(createIdividual("1.4",1))
+for _ in range (1000):
+    POPULATION.append(createIdividual("1.2",1))
 population_proper  =  Population(initial_population=POPULATION)
 
 t1       =  []
 fitness  =  []
 brate    =  []
+
 #-⋯⋯⋅⋱⋰⋆⋅⋅⋄⋅⋅∶⋅⋅⋄▫▪▭┈┅✕⋅⋅⋄⋅⋅✕∶⋅⋅⋄⋱⋰⋯⋯⋯⋯⋅⋱⋱⋰⋆⋅⋅⋄⋅⋅∶⋅⋅⋄▫▪▭┈┅✕⋅⋅⋄⋅⋅✕∶⋅⋅⋄⋱⋰⋯⋯⋯⋅⋱⋰⋆⋅⋅⋄⋅⋅∶⋅⋅⋄▫▪▭┈┅✕⋅⋅⋄⋅⋅✕∶⋅⋅⋄⋱⋰⋯⋯⋯⋰⋆⋅⋅⋄⋅⋅∶⋅⋅⋄▫▪▭┈┅✕⋅⋅⋄⋅⋅✕∶⋅⋅⋄⋱⋰⋯⋯⋯⋅⋱⋰⋆⋅⋅⋄⋅⋅∶⋅⋅⋄▫▪▭┈┅✕⋅⋅⋄⋅⋅✕∶⋅⋅⋄⋱⋰⋯⋯⋯
 
-index      =  0
-peak_val   =  -1
-n          =  8192
-peak_vals  =  [-1,0,1]
+index           =  0
+peak_val        =  0
+resetcounterat  =  8192
+peak_vals       =  [-1,0,1]
 
 for it in range(itern):
 
     t1.append(population_proper.typecount_dict[1])
     fitness.append(population_proper.average_fitness)
     brate.append(population_proper.brate)
-    if not (it + 1) & (n - 1) and SHIFTING_FITNESS_PEAK:
+    if verbose:
+        print("[indcount {} ] | Average fitness : {}".format(population_proper.poplen, population_proper.average_fitness))
+    if not (it + 1) & (resetcounterat - 1) and SHIFTING_FITNESS_PEAK:
+        print("__________________")
         index     =  index + 1
         peak_val  =  peak_vals[index%len(peak_vals)]
     population_proper.birth_death_event(it, peak_val)
@@ -409,3 +347,29 @@ with open(os.path.join(outdir,'brate','brate_i{}.csv'.format(instance)), 'w',new
     writer.writerows([brate])
 
 
+if plt:
+    indir = 'march20'
+
+    t1path     =  os.path.join(indir,'t1','t1_i1.csv')
+    fitpath    =  os.path.join(indir,'avg_fitness','avg_fitness_i1.csv')
+    bratepath  =  os.path.join(indir,'brate','brate_i1.csv')
+
+    t1       =  pd.read_csv(t1path, header=None).iloc[0]
+    fitness  =  pd.read_csv(fitpath, header=None).iloc[0]
+    brate    =  pd.read_csv(bratepath, header=None).iloc[0]
+
+    time = np.arange(len(fitness))
+
+    figur, axarr = plt.subplots(3)
+    axarr[0].plot(time, t1, label="Population Size")
+    axarr[0].set_ylabel('Individual Count')
+
+    axarr[1].plot(time, fitness, label="Fitness")
+    axarr[1].set_ylabel('Populationwide Fitness')
+
+    axarr[2].plot(time, brate, label="Birthrate")
+    axarr[2].set_ylabel('Birthrate')
+    figure = plt.gcf()
+    figure.set_size_inches(12, 6)
+    figure.text(0.5, 0.04, 'BD Process Iteration', ha='center', va='center')
+    plt.show()

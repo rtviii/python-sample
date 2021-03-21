@@ -8,36 +8,40 @@ import numpy as np
 from typing import  Callable, List
 import math
 import argparse
+import pandas as pd
+import matplotlib.pyplot as plt
 
 def dir_path(string):
     if os.path.isdir(string):
         return string
     else:
-        raise NotADirectoryError(string)
+        try:
+            if not os.path.exists(string):
+                os.makedirs(string, exist_ok=True)
+                return string
+        except:
+            raise PermissionError(string)
+
 parser = argparse.ArgumentParser(description='Simulation presets')
 parser.add_argument('--outdir', type=dir_path, help="""Specify the path to write the results of the simulation.""")
-parser.add_argument("-it", "--itern", type=int, help="The number of iterations")
-parser.add_argument("-sim", "--siminst", type=int, help="Simulation tag for the current instance.")
 parser.add_argument("-SFL", "--shifting_landscape", type=int, choices=[0,1], help="Flag for whether the fitness landscape changes or not.")
+parser.add_argument("-V", "--verbose", type=int, choices=[0,1])
 parser.add_argument("-plt", "--toplot", type=int, choices=[0,1], help="Flag for whether the fitness landscape changes or not.")
 
 args                     =  parser.parse_args()
-itern                    =  int(args.itern)
-instance                 =  int(args.siminst)
-shifting_landscape_flag  =  bool(args.shifting_landscape)
-toplot                   =  bool(args.toplot)
-outdir                   =  str(args.outdir)
+verbose                  =  bool(args.verbose)
 
-MUTATION_RATE_ALLELE          =  0.001
-MUTATION_VARIANTS_ALLELE      =  np.arange(-0.5,0.5005,0.005)
-MUTATION_RATE_DUPLICATION     =  0.1
-MUTATION_RATE_CONTRIB_CHANGE  =  0.1
+
+MUTATION_RATE_ALLELE          =  1
+MUTATION_VARIANTS_ALLELE      =  np.arange(-1,1,0.01)
+MUTATION_RATE_DUPLICATION     =  0
+MUTATION_RATE_CONTRIB_CHANGE  =  0
 DEGREE                        =  1
-SHIFTING_FITNESS_PEAK         =  False or shifting_landscape_flag
+
 
 INDIVIDUAL_INITS              =  {   "1.1":{
         'trait_n' :3,
-        'alleles'       :  np.array([1, 1, 0]),
+        'alleles'       :  np.array([1, 1, 0],dtype=np.float64),
         'coefficients'  :  np.array([
                         [1,0,0],
                         [0,1,0],
@@ -46,7 +50,7 @@ INDIVIDUAL_INITS              =  {   "1.1":{
    },
    "1.2":{
         'trait_n' :2,
-        'alleles'       :  np.array([0.5, 0.5]),
+        'alleles'       :  np.array([1,1],dtype=np.float64),
         'coefficients'  :  np.array([
                         [1,0],
                         [0,1]])
@@ -63,7 +67,7 @@ INDIVIDUAL_INITS              =  {   "1.1":{
    },
    "2":{
        'trait_n':3,
-        'alleles'       :  np.array([1, 0, 0, 0 ,1 ,0 , 0,0,0]),
+        'alleles'       :  np.array([1, 0, 0, 0 ,1 ,0 , 0,0,0],dtype=np.float64),
         'coefficients'  :  np.array([
                         [1,1,1,0,0,0,0,0,0],
                         [0,0,0,1,1,1,0,0,0],
@@ -73,7 +77,7 @@ INDIVIDUAL_INITS              =  {   "1.1":{
    },
    "3":{
        "trait_n":3,
-        'alleles'       :  np.array([1, 0, 0, 1]),
+        'alleles'       :  np.array([1, 0, 0, 1],np.float64),
         'coefficients'  :  np.array([
                         [1,0,0,1],
                         [0,1,0,1],
@@ -81,10 +85,8 @@ INDIVIDUAL_INITS              =  {   "1.1":{
                     ])
 
    },
-   "4":{
-   },
    "5":{"trait_n":4,
-        'alleles'       :  np.array([1, 0,1]),
+        'alleles'       :  np.array([1, 0,1],np.float64),
         'coefficients'  :  np.array([
                         [1,0,0],
                         [0,1,0],
@@ -95,7 +97,7 @@ INDIVIDUAL_INITS              =  {   "1.1":{
    },
    "6":{
        "trait_n"          :  4,
-        'alleles'       :  np.array([0.5,0]),
+        'alleles'       :  np.array([0.5,0],np.float64),
         'coefficients'  :  np.array([
                             [1,0],
                             [1,0],
@@ -105,9 +107,8 @@ INDIVIDUAL_INITS              =  {   "1.1":{
    }
 }
 
-def FITMAP(x,std:float=0.05, height:float=10, peak:float=0):
+def FITMAP(x,std:float=1, height:float=1, peak:float=0):
     return height*math.exp(-(sum(((x - peak)**2)/(2*std**2))))
-
 
 class GPMap():
 
@@ -175,6 +176,8 @@ class Population:
         self.average_fitness:float          = 0
         self.brate: float                   = 0
         self.drate: float                   = 0
+        #! Fecundity 
+        #! Mortality (defined anew on slide18)
 
         if len(initial_population) != 0:
             ind:Individ_T
@@ -189,34 +192,26 @@ class Population:
             self.poplen = reduce(lambda x,y: x+y, list(self.typecount_dict.values()))
             fitness_values        =  [*map(lambda individ: individ.fitness, self.population)]
             fitness_total         =  np.sum(fitness_values)
+
             self.average_fitness  =  fitness_total / self.poplen
-
-            self.brate               =  ( self.average_fitness )/( self.average_fitness + self.poplen * 0.01 )
-            self.drate               =  ( self.poplen * 0.01 ) / (self.average_fitness + self.poplen*0.01)
-
+            self.brate  =  ( self.average_fitness )/( self.average_fitness + self.poplen * 0.00035 )
+            self.drate  =  1 - self.brate
 
     def birth_death_event(self,current_iteration:int,peak_val:int)->None:
-
-        # Have to add to fitness total for each individual.
-        # major gains here with reducing the updates
-        # alternative to normalized picking too
-
-        if not current_iteration % 8192 and SHIFTING_FITNESS_PEAK:
-            print("recalculated")
-            for individual in self.population:
-                individual.calculate_fitness(peak_val)
 
         fitness_values        =  [*map(lambda individ: individ.fitness, self.population)]
         fitness_total         =  np.sum(fitness_values)
 
         self.average_fitness  =  fitness_total / self.poplen
-
-        self.brate            =  ( self.average_fitness )/( self.average_fitness + self.poplen * 0.01 )
-        self.drate            =  ( self.poplen * 0.01 ) / (self.average_fitness + self.poplen*0.01)
+        self.brate            =  ( self.average_fitness )/( self.average_fitness + self.poplen * 0.00035 )
+        self.drate            =  1 - self.brate
         
-
         normalized_fitness  =  [*map(lambda x : x / fitness_total, fitness_values) ]
+        # print("bdrat -<>---",self.brate,self.drate)
         event               =  np.random.choice([1, -1], p=[self.brate, self.drate])
+
+        if verbose:
+            print("Chose event {}. With {} | {}".format(event, self.brate, self.drate))
 
         if event > 0:
             chosen:Individ_T =  np.random.choice(self.population, p=normalized_fitness)
@@ -243,7 +238,7 @@ class Individ_T:
     the type-tag is there to keep the track of them in the population.
     """
 
-    def __init__(self, alleles:np.ndarray, gp_map:GPMap, ind_type:int, fitness_peak:int):
+    def __init__(self, alleles, gp_map:GPMap, ind_type:int, fitness_peak:int):
         self.ind_type   =  ind_type
         self.alleles    =  alleles
         self.gp_map     =  gp_map
@@ -259,10 +254,11 @@ class Individ_T:
 
     def calculate_fitness(self,peak:int) -> float:
         """A single individual's fitness."""
-
         self.fitness= FITMAP(self.phenotype, peak=peak)
-        return self.fitness
 
+        if verbose:
+            print("calculated fitness", self.fitness)
+        return self.fitness
 
     def give_birth(self, population:Population, fitness_peak:int)->Individ_T:
 
@@ -272,7 +268,7 @@ class Individ_T:
         @ mutate_allele is applied to each allele with p(MUTATION_RATE)
         """
         def mutation_allele():
-            return np.random.choice(MUTATION_VARIANTS_ALLELE)
+            return np.around(np.random.choice(MUTATION_VARIANTS_ALLELE),4)
         
         def mutation_duplicate(n_traits, alleles, gene_pos, coeff_matrix, deg_matrix):
             # ? where gene position is the index of the"column" of that genes contributions
@@ -311,17 +307,18 @@ class Individ_T:
 
 
         # template alleles from parent
-        alleles_copy  =  self.alleles.copy()
-        coeffs_copy   =  self.gp_map.coeffs_mat.copy()
-        degs_copy     =  self.gp_map.degrees_mat.copy()
+        alleles_copy  =  np.copy(self.alleles)
+        coeffs_copy   =  np.copy(self.gp_map.coeffs_mat)
+        degs_copy     =  np.copy(self.gp_map.degrees_mat)
 
         #template alleles suffer a mutation
         did_mutate = False
 
-        for index, gene in enumerate( self.alleles.tolist() ):
+        for index, gene in enumerate( alleles_copy ):
             if np.random.uniform() <= MUTATION_RATE_ALLELE:
-                did_mutate = True
-                alleles_copy[index] = mutation_allele()
+                did_mutate  =  True
+                mutate_to   =  mutation_allele()
+                alleles_copy[index] = mutate_to
             if np.random.uniform() <= MUTATION_RATE_DUPLICATION:
                 did_mutate    =  True
                 _             =  mutation_duplicate(self.n_traits, alleles_copy, index, coeffs_copy, degs_copy)
@@ -334,6 +331,7 @@ class Individ_T:
                 degs_copy    =  _[0]
                 coeffs_copy  =  _[1]
 
+        print("new alleles : ", alleles_copy)
 
         if did_mutate:
             # gpmap is reinitialized based on the mutated genes
@@ -353,59 +351,38 @@ class Individ_T:
         population.remove_dead(self.ind_type,self)
 
 
-
-
-
-
 def createIdividual(dicttype:str, ind_type)->Individ_T:
     inits  =  INDIVIDUAL_INITS[dicttype]
     gpmap  =  GPMap(inits['alleles'],inits['trait_n'], DEGREE);
     gpmap.coef_init(custom_coeffs=inits['coefficients'])
     return Individ_T(inits['alleles'], gpmap,ind_type, fitness_peak=0)
 
-
 #-⋯⋯⋅⋱⋰⋆⋅⋅⋄⋅⋅∶⋅⋅⋄▫▪▭┈┅✕⋅⋅⋄⋅⋅✕∶⋅⋅⋄⋱⋰⋯⋯⋯⋯⋅⋱⋱⋰⋆⋅⋅⋄⋅⋅∶⋅⋅⋄▫▪▭┈┅✕⋅⋅⋄⋅⋅✕∶⋅⋅⋄⋱⋰⋯⋯⋯⋅⋱⋰⋆⋅⋅⋄⋅⋅∶⋅⋅⋄▫▪▭┈┅✕⋅⋅⋄⋅⋅✕∶⋅⋅⋄⋱⋰⋯⋯⋯⋰⋆⋅⋅⋄⋅⋅∶⋅⋅⋄▫▪▭┈┅✕⋅⋅⋄⋅⋅✕∶⋅⋅⋄⋱⋰⋯⋯⋯⋅⋱⋰⋆⋅⋅⋄⋅⋅∶⋅⋅⋄▫▪▭┈┅✕⋅⋅⋄⋅⋅✕∶⋅⋅⋄⋱⋰⋯⋯⋯
 
-POPULATION = [ ]
-for _ in range (800):
-    POPULATION.append(createIdividual("1.4",1))
+POPULATION:List[Individ_T]= [ ]
+POPULATION.append(createIdividual("1.2",1))
 population_proper  =  Population(initial_population=POPULATION)
-
 t1       =  []
 fitness  =  []
 brate    =  []
+
 #-⋯⋯⋅⋱⋰⋆⋅⋅⋄⋅⋅∶⋅⋅⋄▫▪▭┈┅✕⋅⋅⋄⋅⋅✕∶⋅⋅⋄⋱⋰⋯⋯⋯⋯⋅⋱⋱⋰⋆⋅⋅⋄⋅⋅∶⋅⋅⋄▫▪▭┈┅✕⋅⋅⋄⋅⋅✕∶⋅⋅⋄⋱⋰⋯⋯⋯⋅⋱⋰⋆⋅⋅⋄⋅⋅∶⋅⋅⋄▫▪▭┈┅✕⋅⋅⋄⋅⋅✕∶⋅⋅⋄⋱⋰⋯⋯⋯⋰⋆⋅⋅⋄⋅⋅∶⋅⋅⋄▫▪▭┈┅✕⋅⋅⋄⋅⋅✕∶⋅⋅⋄⋱⋰⋯⋯⋯⋅⋱⋰⋆⋅⋅⋄⋅⋅∶⋅⋅⋄▫▪▭┈┅✕⋅⋅⋄⋅⋅✕∶⋅⋅⋄⋱⋰⋯⋯⋯
 
-index      =  0
-peak_val   =  -1
-n          =  8192
-peak_vals  =  [-1,0,1]
-
-for it in range(itern):
-
-    t1.append(population_proper.typecount_dict[1])
-    fitness.append(population_proper.average_fitness)
-    brate.append(population_proper.brate)
-    if not (it + 1) & (n - 1) and SHIFTING_FITNESS_PEAK:
-        index     =  index + 1
-        peak_val  =  peak_vals[index%len(peak_vals)]
-    population_proper.birth_death_event(it, peak_val)
+peak_val        =  0
 
 
+print(population_proper.poplen)
+print("Ind1: 1")
+print(POPULATION[0].fitness)
+print(POPULATION[0].gp_map.alleles)
+population_proper.birth_death_event(1, peak_val)
+print("----------EVENT---------")
+print("poplen:",population_proper.poplen)
 
-for folder in ['avg_fitness', 'brate','t1' ]:
-    os.makedirs(os.path.join(outdir,folder), exist_ok=True)
+print("Ind1: 1")
+print(POPULATION[0].fitness)
+print(POPULATION[0].gp_map.alleles)
 
-with open(os.path.join(outdir,'t1','t1_i{}.csv'.format(instance)), 'w',newline='') as filein:
-    writer = csv.writer(filein)
-    writer.writerows([t1])
-
-with open(os.path.join(outdir,'avg_fitness','avg_fitness_i{}.csv'.format(instance)), 'w',newline='') as filein:
-    writer = csv.writer(filein)
-    writer.writerows([fitness])
-
-with open(os.path.join(outdir,'brate','brate_i{}.csv'.format(instance)), 'w',newline='') as filein:
-    writer = csv.writer(filein)
-    writer.writerows([brate])
-
-
+print("Ind1: 2")
+print(POPULATION[1].fitness)
+print(POPULATION[1].gp_map.alleles)

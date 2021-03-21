@@ -1,0 +1,18 @@
+{
+    "mut_rates":{
+                "MUTATION_RATE_ALLELE"          :  0.0001,
+                "MUTATION_RATE_DUPLICATION"     :  0,
+                "MUTATION_RATE_CONTRIB_CHANGE"  :  0,
+    },
+
+    "types":[
+        {
+        "trait_n": 2,
+        "alleles": [1, 1],
+        "coefficients": [
+            [1, 0],
+            [0, 1]
+        ]
+        }
+    ]
+}
