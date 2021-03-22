@@ -1,16 +1,7 @@
-import matplotlib.pyplot as plt
-import os, sys
-import numpy as np
-import pandas as pd
-from __future__ import annotations
-from functools import reduce
-import time
 from operator import xor
-import csv
-import sys, os
+import sys, os,csv,math,argparse
 import numpy as np
 from typing import  Callable, List
-import math
 import argparse
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -27,56 +18,51 @@ def dir_path(string):
             raise PermissionError(string)
 
 parser = argparse.ArgumentParser(description='Simulation presets')
-parser.add_argument('--outdir', type=dir_path, help="""Specify the path to write the results of the simulation.""")
-parser.add_argument("-it", "--itern", type=int, help="The number of iterations")
-parser.add_argument("-sim", "--siminst", type=int, help="Simulation tag for the current instance.")
-parser.add_argument("-SFL", "--shifting_landscape", type=int, choices=[0,1], help="Flag for whether the fitness landscape changes or not.")
-parser.add_argument("-V", "--verbose", type=int, choices=[0,1])
-parser.add_argument("-plt", "--toplot", type=int, choices=[0,1], help="Flag for whether the fitness landscape changes or not.")
+parser.add_argument('--indir', type=dir_path, help="""Specify the path to write the results of the simulation.""")
+parser.add_argument('--t1', type=int, help="""Specify the path to write the results of the simulation.""")
+parser.add_argument('--t2', type=int, help="""Specify the path to write the results of the simulation.""")
+parser.add_argument('--t6', type=int, help="""Specify the path to write the results of the simulation.""")
+
 
 args                          =  parser.parse_args()
-itern                         =  int(args.itern)
-instance                      =  int(args.siminst)
-shifting_landscape_flag       =  bool(args.shifting_landscape)
-toplot                        =  bool(args.toplot)
-outdir                        =  str(args.outdir)
-verbose                       =  bool(args.verbose)
-
-MUTATION_RATE_ALLELE          =  0.001
-MUTATION_VARIANTS_ALLELE      =  np.arange(-1,1,0.01)
-MUTATION_RATE_DUPLICATION     =  0
-MUTATION_RATE_CONTRIB_CHANGE  =  0
-DEGREE                        =  1
 
 
 
+indir = 'march21'
+exp = 6
 
-indir = 'march20'
-
-t1path     =  os.path.join(indir,'t1','t1_i1.csv')
-fitpath    =  os.path.join(indir,'avg_fitness','avg_fitness_i1.csv')
-bratepath  =  os.path.join(indir,'brate','brate_i1.csv')
-
-
-
-t1       =  pd.read_csv(t1path, header=None).iloc[0]
-fitness  =  pd.read_csv(fitpath, header=None).iloc[0]
-brate    =  pd.read_csv(bratepath, header=None).iloc[0]
-
-time = np.arange(len(fitness))
+# t1path     =  os.path.join(indir,f"exp{exp}",'t1_mean.csv')
+t2path     =  os.path.join(indir,f"exp{exp}",'t2_mean.csv')
+t6path     =  os.path.join(indir,f"exp{exp}",'t6_mean.csv')
+fitpath    =  os.path.join(indir,f"exp{exp}",'fit_mean.csv')
+bratepath  =  os.path.join(indir,f"exp{exp}",'brate_mean.csv')
 
 
+
+# t1       =   pd.read_csv(t1path, header=None,delimiter=' ', sep=' ').iloc[0]
+t2       =   pd.read_csv(t2path, header=None,delimiter=' ', sep=' ').iloc[0]
+t6       =   pd.read_csv(t6path, header=None,delimiter=' ', sep=' ').iloc[0]
+fit      =   pd.read_csv(fitpath, header=None, delimiter=' ', sep=' ').iloc[0] 
+brate    =   pd.read_csv(bratepath, header=None, sep=' ', delimiter=' ').iloc[0] 
+
+time = np.arange(len(fit))
 
 figur, axarr = plt.subplots(3)
-axarr[0].plot(time, t1, label="Population Size")
-axarr[0].set_ylabel('Individual Count')
 
-axarr[1].plot(time, fitness, label="Fitness")
+axarr[0].plot(time, t2, label="Type 2", color="green")
+axarr[0].plot(time, t6, label="Type 6", color="orange")
+# axarr[0].plot(time, t2, label="Type 2", color="green")
+axarr[0].set_ylabel('Individual Count')
+axarr[0].legend()
+
+axarr[1].plot(time, fit, label="Fitness")
 axarr[1].set_ylabel('Populationwide Fitness')
 
 axarr[2].plot(time, brate, label="Birthrate")
 axarr[2].set_ylabel('Birthrate')
+
 figure = plt.gcf()
+figure.suptitle(f"Experimet{exp}")
 figure.set_size_inches(12, 6)
-figure.text(0.5, 0.04, 'BD Process Iteration', ha='center', va='center')
+figure.text(0.5, 0.04, 'BD Process Iteration(every 1k)', ha='center', va='center')
 plt.show()

@@ -2,9 +2,12 @@ from __future__ import annotations
 from functools import reduce
 import sys, os,json,csv,math, argparse,time
 import numpy as np
-from typing import  Callable, List
+from typing import  Callable, List, TypedDict
 import pandas as pd
 import matplotlib.pyplot as plt
+
+
+
 
 def dir_path(string):
     if os.path.isdir(string):        return string
@@ -24,24 +27,31 @@ parser.add_argument("-sim", "--siminst", type=int, help="Simulation tag for the 
 parser.add_argument("-SFL", "--shifting_landscape", type=int, choices=[0,1], help="Flag for whether the fitness landscape changes or not.")
 parser.add_argument("-V", "--verbose", type=int, choices=[0,1])
 parser.add_argument("-plt", "--toplot", type=int, choices=[0,1], help="Flag for whether the fitness landscape changes or not.")
-parser.add_argument("-params", "--parameters_file", type=f_path)
+parser.add_argument("-p", "--params", type=f_path)
 
 args                     =  parser.parse_args()
+
 itern                    =  int(args.itern) or 50
 instance                 =  int(args.siminst or 0)
 shifting_landscape_flag  =  bool(args.shifting_landscape  or 0)
 toplot                   =  bool(args.toplot or 0)
 outdir                   =  str(args.outdir) 
-params                   =  str(args.parameters_file) 
+params                   =  str(args.params) 
 verbose                  =  bool(args.verbose or 0)
+
+
+data = 0
+with open(params) as jsonfile:
+    data = json.load(jsonfile)
+
+
+MUTATION_RATE_ALLELE          =  0
+MUTATION_RATE_DUPLICATION     =  0
+MUTATION_RATE_CONTRIB_CHANGE  =  0
 
 MUTATION_VARIANTS_ALLELE      =  np.arange(-1,1,0.01)
 DEGREE                        =  1
 SHIFTING_FITNESS_PEAK         =  False or shifting_landscape_flag
-
-with open(params) as f:
-  params = json.load(f)
-  print(params)
 
 
 def FITMAP(x,std:float=1, height:float=1, peak:float=0):
@@ -292,24 +302,32 @@ class Individ_T:
         population.remove_dead(self.ind_type,self)
 
 
-def createIdividual(dicttype:str, ind_type)->Individ_T:
-    inits  =  INDIVIDUAL_INITS[dicttype]
-    gpmap  =  GPMap(inits['alleles'],inits['trait_n'], DEGREE);
-    gpmap.coef_init(custom_coeffs=inits['coefficients'])
-    return Individ_T(inits['alleles'], gpmap,ind_type, fitness_peak=0)
+def consumeParams(data):
+    mutationallele       =  data['mutation_rates']['ALLELE']
+    mutationduplication  =  data['mutation_rates']['DUPLICATION']
+    mutationcontrib      =  data['mutation_rates']['CONTRIB_CHANGE']
+    types                =  data['types']
 
-#-⋯⋯⋅⋱⋰⋆⋅⋅⋄⋅⋅∶⋅⋅⋄▫▪▭┈┅✕⋅⋅⋄⋅⋅✕∶⋅⋅⋄⋱⋰⋯⋯⋯⋯⋅⋱⋱⋰⋆⋅⋅⋄⋅⋅∶⋅⋅⋄▫▪▭┈┅✕⋅⋅⋄⋅⋅✕∶⋅⋅⋄⋱⋰⋯⋯⋯⋅⋱⋰⋆⋅⋅⋄⋅⋅∶⋅⋅⋄▫▪▭┈┅✕⋅⋅⋄⋅⋅✕∶⋅⋅⋄⋱⋰⋯⋯⋯⋰⋆⋅⋅⋄⋅⋅∶⋅⋅⋄▫▪▭┈┅✕⋅⋅⋄⋅⋅✕∶⋅⋅⋄⋱⋰⋯⋯⋯⋅⋱⋰⋆⋅⋅⋄⋅⋅∶⋅⋅⋄▫▪▭┈┅✕⋅⋅⋄⋅⋅✕∶⋅⋅⋄⋱⋰⋯⋯⋯
+consumeParams(data)
 
-POPULATION = [ ]
-for _ in range (1000):
-    POPULATION.append(createIdividual("1.2",1))
-population_proper  =  Population(initial_population=POPULATION)
+# def createIdividual(dicttype:str, ind_type)->Individ_T:
+#     inits  =  INDIVIDUAL_INITS[dicttype]
+#     gpmap  =  GPMap(inits['alleles'],inits['trait_n'], DEGREE);
+#     gpmap.coef_init(custom_coeffs=inits['coefficients'])
+#     return Individ_T(inits['alleles'], gpmap,ind_type, fitness_peak=0)
 
-t1       =  []
-fitness  =  []
-brate    =  []
+# #-⋯⋯⋅⋱⋰⋆⋅⋅⋄⋅⋅∶⋅⋅⋄▫▪▭┈┅✕⋅⋅⋄⋅⋅✕∶⋅⋅⋄⋱⋰⋯⋯⋯⋯⋅⋱⋱⋰⋆⋅⋅⋄⋅⋅∶⋅⋅⋄▫▪▭┈┅✕⋅⋅⋄⋅⋅✕∶⋅⋅⋄⋱⋰⋯⋯⋯⋅⋱⋰⋆⋅⋅⋄⋅⋅∶⋅⋅⋄▫▪▭┈┅✕⋅⋅⋄⋅⋅✕∶⋅⋅⋄⋱⋰⋯⋯⋯⋰⋆⋅⋅⋄⋅⋅∶⋅⋅⋄▫▪▭┈┅✕⋅⋅⋄⋅⋅✕∶⋅⋅⋄⋱⋰⋯⋯⋯⋅⋱⋰⋆⋅⋅⋄⋅⋅∶⋅⋅⋄▫▪▭┈┅✕⋅⋅⋄⋅⋅✕∶⋅⋅⋄⋱⋰⋯⋯⋯
 
-#-⋯⋯⋅⋱⋰⋆⋅⋅⋄⋅⋅∶⋅⋅⋄▫▪▭┈┅✕⋅⋅⋄⋅⋅✕∶⋅⋅⋄⋱⋰⋯⋯⋯⋯⋅⋱⋱⋰⋆⋅⋅⋄⋅⋅∶⋅⋅⋄▫▪▭┈┅✕⋅⋅⋄⋅⋅✕∶⋅⋅⋄⋱⋰⋯⋯⋯⋅⋱⋰⋆⋅⋅⋄⋅⋅∶⋅⋅⋄▫▪▭┈┅✕⋅⋅⋄⋅⋅✕∶⋅⋅⋄⋱⋰⋯⋯⋯⋰⋆⋅⋅⋄⋅⋅∶⋅⋅⋄▫▪▭┈┅✕⋅⋅⋄⋅⋅✕∶⋅⋅⋄⋱⋰⋯⋯⋯⋅⋱⋰⋆⋅⋅⋄⋅⋅∶⋅⋅⋄▫▪▭┈┅✕⋅⋅⋄⋅⋅✕∶⋅⋅⋄⋱⋰⋯⋯⋯
+# POPULATION = [ ]
+# for _ in range (1000):
+#     POPULATION.append(createIdividual("1.2",1))
+# population_proper  =  Population(initial_population=POPULATION)
+
+# t1       =  []
+# fitness  =  []
+# brate    =  []
+
+# #-⋯⋯⋅⋱⋰⋆⋅⋅⋄⋅⋅∶⋅⋅⋄▫▪▭┈┅✕⋅⋅⋄⋅⋅✕∶⋅⋅⋄⋱⋰⋯⋯⋯⋯⋅⋱⋱⋰⋆⋅⋅⋄⋅⋅∶⋅⋅⋄▫▪▭┈┅✕⋅⋅⋄⋅⋅✕∶⋅⋅⋄⋱⋰⋯⋯⋯⋅⋱⋰⋆⋅⋅⋄⋅⋅∶⋅⋅⋄▫▪▭┈┅✕⋅⋅⋄⋅⋅✕∶⋅⋅⋄⋱⋰⋯⋯⋯⋰⋆⋅⋅⋄⋅⋅∶⋅⋅⋄▫▪▭┈┅✕⋅⋅⋄⋅⋅✕∶⋅⋅⋄⋱⋰⋯⋯⋯⋅⋱⋰⋆⋅⋅⋄⋅⋅∶⋅⋅⋄▫▪▭┈┅✕⋅⋅⋄⋅⋅✕∶⋅⋅⋄⋱⋰⋯⋯⋯
 
 index           =  0
 peak_val        =  0
@@ -331,8 +349,8 @@ for it in range(itern):
 
 
 
-for folder in ['avg_fitness', 'brate','t1' ]:
-    os.makedirs(os.path.join(outdir,folder), exist_ok=True)
+# for folder in ['avg_fitness', 'brate','t1' ]:
+#     os.makedirs(os.path.join(outdir,folder), exist_ok=True)
 
 with open(os.path.join(outdir,'t1','t1_i{}.csv'.format(instance)), 'w',newline='') as filein:
     writer = csv.writer(filein)

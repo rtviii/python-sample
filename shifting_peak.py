@@ -38,62 +38,63 @@ shifting_landscape_flag  =  bool(args.shifting_landscape)
 outdir                   =  str(args.outdir)
 
 
-MUTATION_RATE_ALLELE          =  0.01
+MUTATION_RATE_ALLELE          =  0.0001
 MUTATION_VARIANTS_ALLELE      =  np.arange(-1,1,0.01)
 MUTATION_RATE_DUPLICATION     =  0.00
 MUTATION_RATE_CONTRIB_CHANGE  =  0.00
 DEGREE                        =  1
-resetcounterat  =  1024 * 2
+resetcounterat  = 1024 * 8
 
 SHIFTING_FITNESS_PEAK         =  False or shifting_landscape_flag
 
 INDIVIDUAL_INITS              =  {   
     "1.1":{
         'trait_n' :3,
-        'alleles'       :  np.array([1.0, 1.0, 0], np.float64),
+        'alleles'       :  np.array([1.0, 1.0, 0], dtype=np.float64),
         'coefficients'  :  np.array([
                         [1,0,0],
                         [0,1,0],
                         [0,0,1],
-                    ], np.float64)
+                    ], dtype=np.float64)
    },
    "1.2":{
         'trait_n' :2,
-        'alleles'       :  np.array([1.0,1.0], np.float64),
+        'alleles'       :  np.array([1.0,1.0], dtype=np.float64),
         'coefficients'  :  np.array([
                         [1.0,0.0],
                         [0.0,1.0]]
-                        , np.float64)
+                        , dtype=np.float64)
    },
    "1.4":{
         'trait_n' :4,
-        'alleles'       :  np.array([1,1,1,1], np.float64),
+        'alleles'       :  np.array([1,1,1,1], dtype=np.float64),
         'coefficients'  :  np.array([
                         [1,0,0,0],
                         [0,1,0,0],
                         [0,0,1,0],
                         [0,0,0,1],
-                    ], np.float64)
+                    ], dtype=np.float64)
    },
    "2":{
-       'trait_n':3,
-        'alleles'       :  np.array([1, 0, 0, 0 ,1 ,0 , 0,0,0], np.float64),
+       'trait_n':4,
+        'alleles'       :  np.array([1,0,0,1,0,0,1,0,0,1,0,0], dtype=np.float64),
         'coefficients'  :  np.array([
-                        [1,1,1,0,0,0,0,0,0],
-                        [0,0,0,1,1,1,0,0,0],
-                        [0,0,0,0,0,0,1,1,1],
-                    ],np.float64)
+                        [1,1,1,0,0,0,0,0,0,0,0,0],
+                        [0,0,0,1,1,1,0,0,0,0,0,0],
+                        [0,0,0,0,0,0,1,1,1,0,0,0],
+                        [0,0,0,0,0,0,0,0,0,1,1,1],
+                    ],dtype=np.float64)
 
    },
    "6":{
        "trait_n"          :  4,
-        'alleles'       :  np.array([0.5,0], np.float64),
+        'alleles'       :  np.array([1,1], dtype=np.float64),
         'coefficients'  :  np.array([
                             [1,0],
                             [1,0],
                             [0,1],
                             [0,1],
-                            ],np.float64)
+                            ],dtype=np.float64)
    }
 }
 
