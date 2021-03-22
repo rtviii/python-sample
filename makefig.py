@@ -28,30 +28,34 @@ args                          =  parser.parse_args()
 
 
 
-indir = 'march21'
-exp = 6
+indir = 'means'
+exp = 12
 
 # t1path     =  os.path.join(indir,f"exp{exp}",'t1_mean.csv')
-t2path     =  os.path.join(indir,f"exp{exp}",'t2_mean.csv')
+norm6path  =  os.path.join(indir,f"exp{exp}",'norm6_mean.csv')
 t6path     =  os.path.join(indir,f"exp{exp}",'t6_mean.csv')
+# bratepath  =  os.path.join(indir,f"exp{exp}",'norm2_mean.csv')
+# t6path     =  os.path.join(indir,f"exp{exp}",'t6_mean.csv')
+# bratepath  =  os.path.join(indir,f"exp{exp}",'norm6_mean.csv')
 fitpath    =  os.path.join(indir,f"exp{exp}",'fit_mean.csv')
 bratepath  =  os.path.join(indir,f"exp{exp}",'brate_mean.csv')
 
 
 
 # t1       =   pd.read_csv(t1path, header=None,delimiter=' ', sep=' ').iloc[0]
-t2       =   pd.read_csv(t2path, header=None,delimiter=' ', sep=' ').iloc[0]
+# t2       =   pd.read_csv(t2path, header=None,delimiter=' ', sep=' ').iloc[0]
 t6       =   pd.read_csv(t6path, header=None,delimiter=' ', sep=' ').iloc[0]
 fit      =   pd.read_csv(fitpath, header=None, delimiter=' ', sep=' ').iloc[0] 
 brate    =   pd.read_csv(bratepath, header=None, sep=' ', delimiter=' ').iloc[0] 
+norm6    =   pd.read_csv(norm6path, header=None, sep=' ', delimiter=' ').iloc[0] 
 
 time = np.arange(len(fit))
 
-figur, axarr = plt.subplots(3)
+figur, axarr = plt.subplots(4)
 
-axarr[0].plot(time, t2, label="Type 2", color="green")
-axarr[0].plot(time, t6, label="Type 6", color="orange")
-# axarr[0].plot(time, t2, label="Type 2", color="green")
+# axarr[0].plot(time, t1, label="Type 1", color="blue")
+axarr[0].plot(time, t6, label="Type 6", color="green")
+# axarr[0].plot(time, t6, label="Type 6", color="orange")
 axarr[0].set_ylabel('Individual Count')
 axarr[0].legend()
 
@@ -60,6 +64,9 @@ axarr[1].set_ylabel('Populationwide Fitness')
 
 axarr[2].plot(time, brate, label="Birthrate")
 axarr[2].set_ylabel('Birthrate')
+
+# axarr[3].plot(time, norm6, label="Connectivity")
+# axarr[3].set_ylabel('Connectivity | Frob. Norm')
 
 figure = plt.gcf()
 figure.suptitle(f"Experimet{exp}")

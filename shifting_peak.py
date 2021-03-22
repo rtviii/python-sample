@@ -38,12 +38,13 @@ shifting_landscape_flag  =  bool(args.shifting_landscape)
 outdir                   =  str(args.outdir)
 
 
-MUTATION_RATE_ALLELE          =  0.0001
+MUTATION_RATE_ALLELE          =  0.01
 MUTATION_VARIANTS_ALLELE      =  np.arange(-1,1,0.01)
 MUTATION_RATE_DUPLICATION     =  0.00
 MUTATION_RATE_CONTRIB_CHANGE  =  0.00
 DEGREE                        =  1
-resetcounterat  = 1024 * 8
+resetcounterat                =  1024 * 2
+BRATE_DENOM                   =  0.0002
 
 SHIFTING_FITNESS_PEAK         =  False or shifting_landscape_flag
 
@@ -110,7 +111,6 @@ class Fitmap():
         def _(phenotype):
             return self.amplitude*math.exp(-(np.sum(((phenotype - self.mean)**2)/(2*self.std**2))))
         return _
-
 
 class GPMap():
 
@@ -191,7 +191,7 @@ class Population:
             fitness_values        =  [*map(lambda individ: individ.fitness, self.population)]
             fitness_total         =  np.sum(fitness_values)
             self.average_fitness  =  fitness_total / self.poplen
-            self.brate  =  ( self.average_fitness )/( self.average_fitness + self.poplen * 0.00025 )
+            self.brate  =  ( self.average_fitness )/( self.average_fitness + self.poplen * BRATE_DENOM )
             self.drate  =  1 - self.brate
 
     def birth_death_event(self,current_iteration:int,)->None:
@@ -203,7 +203,7 @@ class Population:
         fitness_values        =  [*map(lambda individ: individ.fitness, self.population)]
         fitness_total         =  np.sum(fitness_values)
         self.average_fitness  =  fitness_total / self.poplen
-        self.brate            =  ( self.average_fitness )/( self.average_fitness + self.poplen * 0.00025)
+        self.brate            =  ( self.average_fitness )/( self.average_fitness + self.poplen * BRATE_DENOM)
         self.drate            =  1 - self.brate
 
         normalized_fitness  =  [*map(lambda x : x / fitness_total, fitness_values) ]
@@ -367,44 +367,57 @@ def getConnectivity(popobj:Population, itype:int):
     return np.sum(list(map(connectivityForType(itype),popobj.population)))/popobj.typecount_dict[itype]
 
 POPULATION = [ ]
-for _ in range(800):
+for _ in range(400):
+    POPULATION.append(createIdividual("6",6))
     POPULATION.append(createIdividual("1.4",1))
 
-_Fitmap =  Fitmap(amplitude=1,std=1,mean=0)
+_Fitmap            =  Fitmap(amplitude=1,std=1,mean=0)
 population_proper  =  Population(_Fitmap,initial_population=POPULATION)
-t1       =  []
-norm1    =  []
-fitness  =  []
-brate    =  []
-fitpeak    =  []
+t1                 =  []
+t6                 =  []
+fitness            =  []
+brate              =  []
+fitpeak            =  []
 
 #-⋯⋯⋅⋱⋰⋆⋅⋅⋄⋅⋅∶⋅⋅⋄▫▪▭┈┅✕⋅⋅⋄⋅⋅✕∶⋅⋅⋄⋱⋰⋯⋯⋯⋯⋅⋱⋱⋰⋆⋅⋅⋄⋅⋅∶⋅⋅⋄▫▪▭┈┅✕⋅⋅⋄⋅⋅✕∶⋅⋅⋄⋱⋰⋯⋯⋯⋅⋱⋰⋆⋅⋅⋄⋅⋅∶⋅⋅⋄▫▪▭┈┅✕⋅⋅⋄⋅⋅✕∶⋅⋅⋄⋱⋰⋯⋯⋯⋰⋆⋅⋅⋄⋅⋅∶⋅⋅⋄▫▪▭┈┅✕⋅⋅⋄⋅⋅✕∶⋅⋅⋄⋱⋰⋯⋯⋯⋅⋱⋰⋆⋅⋅⋄⋅⋅∶⋅⋅⋄▫▪▭┈┅✕⋅⋅⋄⋅⋅✕∶⋅⋅⋄⋱⋰⋯⋯⋯
+
 index           =  -1
 peak_val        =  0
 peak_vals       =  [1,0,-1, 0]
 
 t1.append(population_proper.typecount_dict[1])
+t6.append(population_proper.typecount_dict[6])
 fitness.append(population_proper.average_fitness)
 brate.append(population_proper.brate)
 fitpeak.append(population_proper.fitmap.mean)
+
 for it in range(itern):
 
     t1.append(population_proper.typecount_dict[1])
+    t6.append(population_proper.typecount_dict[6])
     fitness.append(population_proper.average_fitness)
     brate.append(population_proper.brate)
     fitpeak.append(population_proper.fitmap.mean)
+
     if ( not (it + 1) & (resetcounterat - 1) ) and SHIFTING_FITNESS_PEAK:
         index = index + 1
-        population_proper.updateFitmap(mean=( population_proper.fitmap.mean+0.5 ))
+        population_proper.updateFitmap(mean=( population_proper.fitmap.mean+0.25 ))
     population_proper.birth_death_event(it)
 
 
 
-for folder in ['fit', 'brate','t1','t6','norm1' ]:
+for folder in ['fit', 'brate','t2','t1','t6','fitpeak' ]:
     os.makedirs(os.path.join(outdir,folder), exist_ok=True)
+
+with open(os.path.join(outdir,'fitpeak','fitpeak_i{}.csv'.format(instance)), 'w',newline='') as filein:
+    writer = csv.writer(filein)
+    writer.writerows([fitpeak])
 with open(os.path.join(outdir,'t1','t1_i{}.csv'.format(instance)), 'w',newline='') as filein:
     writer = csv.writer(filein)
     writer.writerows([t1])
+with open(os.path.join(outdir,'t6','t6_i{}.csv'.format(instance)), 'w',newline='') as filein:
+    writer = csv.writer(filein)
+    writer.writerows([t6])
 
 with open(os.path.join(outdir,'fit','fit_i{}.csv'.format(instance)), 'w',newline='') as filein:
     writer = csv.writer(filein)
@@ -419,6 +432,7 @@ if toplot:
     time = np.arange(len(fitness))
     figur, axarr = plt.subplots(4)
     axarr[0].plot(time, t1, label="Type 1", color="blue")
+    axarr[0].plot(time, t6, label="Type 6", color="pink")
     axarr[0].set_ylabel('Individual Count')
     axarr[0].legend()
 
@@ -433,5 +447,5 @@ if toplot:
 
     figure = plt.gcf()
     figure.set_size_inches(12, 6)
-    figure.text(0.5, 0.04, 'BD Process Iteration(every 1k)', ha='center', va='center')
+    figure.text(0.5, 0.04, 'BD Process Iteration', ha='center', va='center')
     plt.show()
