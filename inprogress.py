@@ -32,18 +32,18 @@ parser.add_argument("-SP", "--shifting_peak", type=int, choices=[0,1], help="Fla
 parser.add_argument("-plot", "--toplot", type=int, choices=[0,1])
 
 
-args                     =  parser.parse_args()
-itern                    =  int(args.itern if args.itern is not None else 0)
-instance                 =  int(args.siminst if args.siminst is not None else 0)
-toplot                   =  bool(args.toplot if args.toplot is not None else 0)
+args           =  parser.parse_args()
+itern          =  int(args.itern if args.itern is not None else 0)
+instance       =  int(args.siminst if args.siminst is not None else 0)
+toplot         =  bool(args.toplot if args.toplot is not None else 0)
 shifting_peak  =  bool(args.shifting_peak if args.shifting_peak is not None else 0)
-outdir                   =  args.outdir if args.toplot is not None else 0
+outdir         =  args.outdir if args.toplot is not None else 0
 
 
 MUTATION_RATE_ALLELE          =  0.01
 MUTATION_VARIANTS_ALLELE      =  np.arange(-1,1,0.01)
-MUTATION_RATE_DUPLICATION     =  0.00
-MUTATION_RATE_CONTRIB_CHANGE  =  0.01
+MUTATION_RATE_DUPLICATION     =  0.1
+MUTATION_RATE_CONTRIB_CHANGE  =  0.1
 DEGREE                        =  1
 BRATE_DENOM                   =  0.001
 SHIFTING_FITNESS_PEAK         =  False or shifting_peak
@@ -244,7 +244,6 @@ class Population:
         y = [*map(ofType(itype),self.population)]
         return  np.sum(y,axis=0)/self.typecount_dict[itype]
 
-
     def updateFitmap(self,**kwargs):
         self.fitmap.mean       =  kwargs['mean'] if 'mean' in kwargs else self.fitmap.mean
         self.fitmap.amplitude  =  kwargs['amplitude'] if 'amplitude' in kwargs else self.fitmap.amplitude
@@ -355,81 +354,96 @@ def createIdividual(dicttype:str, ind_type)->Individ_T:
 
 
 POPULATION = [ ]
-for _ in range(400):
+for _ in range(800):
     POPULATION.append(createIdividual("1.4",1))
-    POPULATION.append(createIdividual("6",6))
 
 _Fitmap            =  Fitmap(amplitude=1,std=1,mean=0)
 population_proper  =  Population(_Fitmap,initial_population=POPULATION)
 
 # population_proper.getAvgConnectivityForType(1)
 # population_proper.getAvgConnectivityForType(6)
-t1                 =  []
-t6                 =  []
-fitness            =  []
-brate              =  []
-t1_trait_receptivity  =  []
-t1_gene_connectivity  =  []
+t1       =  []
+fit  =  []
+brate    =  []
+cnt      =  []
+rcpt     =  []
 
-t6_trait_receptivity  =  []
-t6_gene_connectivity  =  []
+# t6_trait_receptivity  =  []
+# t6_gene_connectivity  =  []
 
 #-⋯⋯⋅⋱⋰⋆⋅⋅⋄⋅⋅∶⋅⋅⋄▫▪▭┈┅✕⋅⋅⋄⋅⋅✕∶⋅⋅⋄⋱⋰⋯⋯⋯⋯⋅⋱⋱⋰⋆⋅⋅⋄⋅⋅∶⋅⋅⋄▫▪▭┈┅✕⋅⋅⋄⋅⋅✕∶⋅⋅⋄⋱⋰⋯⋯⋯⋅⋱⋰⋆⋅⋅⋄⋅⋅∶⋅⋅⋄▫▪▭┈┅✕⋅⋅⋄⋅⋅✕∶⋅⋅⋄⋱⋰⋯⋯⋯⋰⋆⋅⋅⋄⋅⋅∶⋅⋅⋄▫▪▭┈┅✕⋅⋅⋄⋅⋅✕∶⋅⋅⋄⋱⋰⋯⋯⋯⋅⋱⋰⋆⋅⋅⋄⋅⋅∶⋅⋅⋄▫▪▭┈┅✕⋅⋅⋄⋅⋅✕∶⋅⋅⋄⋱⋰⋯⋯⋯
 for it in range(itern):
 
     t1.append(population_proper.typecount_dict[1])
-    t6.append(population_proper.typecount_dict[6])
-    fitness.append(population_proper.average_fitness)
+    fit.append(population_proper.average_fitness)
     brate.append(population_proper.brate)
 
-    if not it % 10000:
+    if not it % 200:
         if population_proper.typecount_dict[1] > 0:
             [t1t,t1g] = population_proper.getAvgConnectivityForType(1)
         else:
             [t1t,t1g] = [0,0]
 
-        t1_trait_receptivity.append(t1t)
-        t1_gene_connectivity.append(t1g)
-        # ----------------
-        if population_proper.typecount_dict[6] > 0:
-            [t6t,t6g] = population_proper.getAvgConnectivityForType(6)
-        else:
-            [t6t,t6g] = [0,0]
-        t6_trait_receptivity.append(t6t)
-        t6_gene_connectivity.append(t6g)
+        cnt.append(t1t)
+        rcpt.append(t1g)
     population_proper.birth_death_event(it)
 
-out = pd.DataFrame({
-    "t1"               :  t1,
-    "t1_connectivity"  :  t1_gene_connectivity,
-    "t1_receptivity"   :  t1_trait_receptivity,
-    # "t6"               :  t6,
-    # "t6_connectivity"  :  t6_gene_connectivity,
-    # "t6_receptivity"   :  t6_trait_receptivity,
-    "fitness"  :  fitness,
+
+
+[t1,fit,brate,cnt,rcpt]=[*map(lambda x: np.around(x,5), [t1,fit,brate,cnt,rcpt])]
+
+data = pd.DataFrame({
+    "t1"       :  t1,
+    "fit"  :  fit,
     "brate"    :  brate
 })
+connectivity = pd.DataFrame({
+    "cnt"   :  cnt,
+    "rcpt"  :  rcpt,
+})
+
+if outdir:
+    connectivity.to_parquet(os.path.join(outdir,f'connectivity{instance}.parquet'))
+    data.to_parquet(os.path.join(outdir,f'data{instance}.parquet'))
+
+    for folder in ['fit', 'brate','t1', 'cnt','rcpt']:
+        os.makedirs(os.path.join(outdir,folder), exist_ok=True)
+
+    with open(os.path.join(outdir,'cnt','cnt_i{}.csv'.format(instance)), 'w',newline='') as filein:
+        writer = csv.writer(filein)
+        writer.writerows([cnt])
+    with open(os.path.join(outdir,'rcpt','rcpt_i{}.csv'.format(instance)), 'w',newline='') as filein:
+        writer = csv.writer(filein)
+        writer.writerows([rcpt])
+    with open(os.path.join(outdir,'t1','t1_i{}.csv'.format(instance)), 'w',newline='') as filein:
+        writer = csv.writer(filein)
+        writer.writerows([t1])
+    with open(os.path.join(outdir,'fit','fit_i{}.csv'.format(instance)), 'w',newline='') as filein:
+        writer = csv.writer(filein)
+        writer.writerows([fit])
+    with open(os.path.join(outdir,'brate','brate_i{}.csv'.format(instance)), 'w',newline='') as filein:
+        writer = csv.writer(filein)
+        writer.writerows([brate])
+
+        
 
 
 if toplot:
-    time = np.arange(len(fitness))
-    time2 = np.arange(len(t1_gene_connectivity))
+    time = np.arange(len(fit))
+    time2 = np.arange(len(cnt))
     figur, axarr = plt.subplots(2,2)
     axarr[0,0].plot(time, t1, label="Type 1", color="blue")
-    axarr[0,0].plot(time, t6, label="Type 6", color="pink")
     axarr[0,0].set_ylabel('Individual Count')
     axarr[0,0].legend()
 
-    axarr[0,1].plot(time, fitness, label="Fitness")
+    axarr[0,1].plot(time, fit, label="Fitness")
     axarr[0,1].set_ylabel('Populationwide Fitness')
 
     axarr[1,1].plot(time, brate, label="Birthrate")
     axarr[1,1].set_ylabel('Birthrate')
 
-    axarr[1,0].plot(time2, t1_gene_connectivity,'-', label="T1 Connectivity",c='blue')
-    axarr[1,0].plot(time2, t1_trait_receptivity,'-', label="T1 Receptivity",c='lightblue')
-    axarr[1,0].plot(time2, t6_gene_connectivity,'-.', label="T6 Connectivity",c='pink')
-    axarr[1,0].plot(time2, t6_trait_receptivity,'-.', label="T6 Receptivity",c='salmon')
+    axarr[1,0].plot(time2, cnt,'-', label="T1 Connectivity",c='blue')
+    axarr[1,0].plot(time2, rcpt,'-', label="T1 Receptivity",c='lightblue')
     axarr[1,0].plot([],[],'*', label="(Every 100 iterations)")
     axarr[1,0].set_ylabel('Connectivity')
     axarr[1,0].legend()

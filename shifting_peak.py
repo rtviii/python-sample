@@ -44,7 +44,7 @@ MUTATION_RATE_DUPLICATION     =  0.00
 MUTATION_RATE_CONTRIB_CHANGE  =  0.00
 DEGREE                        =  1
 resetcounterat                =  1024 * 2
-BRATE_DENOM                   =  0.0002
+BRATE_DENOM                   =  0.001
 
 SHIFTING_FITNESS_PEAK         =  False or shifting_landscape_flag
 
@@ -365,20 +365,9 @@ def createIdividual(dicttype:str, ind_type)->Individ_T:
     gpmap.coef_init(custom_coeffs=inits['coefficients'])
     return Individ_T(inits['alleles'], gpmap,ind_type)
 
-def getConnectivity(popobj:Population, itype:int):
-
-    def connectivityForType(itype:int):  
-        def getNormOfType(ind:Individ_T):  
-            if ind.ind_type == itype:
-                return np.linalg.norm(ind.gp_map.coeffs_mat, ord='fro')
-            else:
-                return 0
-        return getNormOfType
-    return np.sum(list(map(connectivityForType(itype),popobj.population)))/popobj.typecount_dict[itype]
 
 POPULATION = [ ]
-for _ in range(400):
-    POPULATION.append(createIdividual("6",6))
+for _ in range(800):
     POPULATION.append(createIdividual("1.4",1))
 
 _Fitmap            =  Fitmap(amplitude=1,std=1,mean=0)
