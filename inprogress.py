@@ -36,7 +36,7 @@ args                     =  parser.parse_args()
 itern                    =  int(args.itern if args.itern is not None else 0)
 instance                 =  int(args.siminst if args.siminst is not None else 0)
 toplot                   =  bool(args.toplot if args.toplot is not None else 0)
-shifting_landscape_flag  =  bool(args.shifting_landscape if args.shifting_peak is not None else 0)
+shifting_peak  =  bool(args.shifting_peak if args.shifting_peak is not None else 0)
 outdir                   =  args.outdir if args.toplot is not None else 0
 
 
@@ -45,12 +45,10 @@ MUTATION_VARIANTS_ALLELE      =  np.arange(-1,1,0.01)
 MUTATION_RATE_DUPLICATION     =  0.00
 MUTATION_RATE_CONTRIB_CHANGE  =  0.01
 DEGREE                        =  1
-resetcounterat                =  1024 * 2
 BRATE_DENOM                   =  0.001
-
-SHIFTING_FITNESS_PEAK         =  False 
-# print("Got params: MUT_ALLELE:{}\nBRATE_DENOM:{}\nSHIFTINGPEAK?:{}\nresetcounter:{}".format(MUTATION_RATE_ALLELE,BRATE_DENOM,SHIFTING_FITNESS_PEAK,resetcounterat))
-
+SHIFTING_FITNESS_PEAK         =  False or shifting_peak
+#
+COUNTER_RESET                =  1024 * 2
 
 INDIVIDUAL_INITS              =  {   
     "1.1":{
@@ -113,7 +111,6 @@ class Fitmap():
 
     def getMap(self):
         def _(phenotype):
-            # print("returning fitmap with params std: {} | mean :{} | amplitude:{}".format(self.std,self.mean,self.amplitude))
             return self.amplitude*math.exp(-(np.sum(((phenotype - self.mean)**2)/(2*self.std**2))))
         return _
 
@@ -204,7 +201,7 @@ class Population:
 
     def birth_death_event(self, curr_iter)->None:
 
-        if curr_iter == 0 or not curr_iter%resetcounterat:
+        if curr_iter == 0 or not curr_iter%COUNTER_RESET:
             for individual in self.population:
                 individual.calculate_fitness(self.fitmap.getMap())
 
@@ -385,7 +382,7 @@ for it in range(itern):
     fitness.append(population_proper.average_fitness)
     brate.append(population_proper.brate)
 
-    if not it % 100:
+    if not it % 10000:
         if population_proper.typecount_dict[1] > 0:
             [t1t,t1g] = population_proper.getAvgConnectivityForType(1)
         else:
@@ -393,26 +390,25 @@ for it in range(itern):
 
         t1_trait_receptivity.append(t1t)
         t1_gene_connectivity.append(t1g)
-
         # ----------------
-
         if population_proper.typecount_dict[6] > 0:
             [t6t,t6g] = population_proper.getAvgConnectivityForType(6)
         else:
             [t6t,t6g] = [0,0]
         t6_trait_receptivity.append(t6t)
         t6_gene_connectivity.append(t6g)
-    
     population_proper.birth_death_event(it)
 
-
 out = pd.DataFrame({
-    "t1"       :  t1,
-    "t6"       :  t6,
+    "t1"               :  t1,
+    "t1_connectivity"  :  t1_gene_connectivity,
+    "t1_receptivity"   :  t1_trait_receptivity,
+    # "t6"               :  t6,
+    # "t6_connectivity"  :  t6_gene_connectivity,
+    # "t6_receptivity"   :  t6_trait_receptivity,
     "fitness"  :  fitness,
     "brate"    :  brate
 })
-# out.to_parquet('list.parquet')
 
 
 if toplot:
