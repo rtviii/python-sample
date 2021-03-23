@@ -152,7 +152,16 @@ class GPMap():
         return 
 
 
+    def _genesPerTrait(self)->float:
+        for trait in self.coeffs_mat:
+            for gene in trait:
+                print(gene)
+        return 0
+    def _contribsPerGene(self)->float:
+        return 0
+
     def map_phenotype(self)->List[float]:
+
 
         #? The whole purpose of gpmap is to define a map from genotype to phenotype
         #? Here phenotype is calculated
@@ -355,6 +364,7 @@ def createIdividual(dicttype:str, ind_type)->Individ_T:
     gpmap  =  GPMap(inits['alleles'],inits['trait_n'], DEGREE);
     gpmap.coef_init(custom_coeffs=inits['coefficients'])
     return Individ_T(inits['alleles'], gpmap,ind_type)
+
 def getConnectivity(popobj:Population, itype:int):
 
     def connectivityForType(itype:int):  
