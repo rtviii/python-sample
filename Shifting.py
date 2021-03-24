@@ -1,6 +1,6 @@
 from __future__ import annotations
 from functools import reduce
-import time
+import time as t
 from operator import xor
 import csv
 import sys, os
@@ -47,8 +47,7 @@ DEGREE                        =  1
 BRATE_DENOM                   =  0.001
 SHIFTING_FITNESS_PEAK         =  False or shifting_peak
 #
-COUNTER_RESET                 =  1024
-
+COUNTER_RESET                 =  1024 
 INDIVIDUAL_INITS              =  {   
     "1.1":{
         'trait_n' :3,
@@ -371,14 +370,14 @@ ASYM_SWITCH          =  False
 LANDSCAPE_INCREMENT  =  0.01
 
 
+time1 = t.time()
+
 for it in range(itern):
     t2.append(population_proper.typecount_dict[2])
     t6.append(population_proper.typecount_dict[6])
     fit.append(population_proper.average_fitness)
     brate.append(population_proper.brate)
     lsc= np.append(lsc, mean)
-
-
 
     if not (it + 1 )  & (COUNTER_RESET -1 ) and SHIFTING_FITNESS_PEAK:
         
@@ -402,6 +401,7 @@ for it in range(itern):
 lsc = np.reshape(lsc, (-1,4))
 [t2,t6,fit,brate]=[*map(lambda x: np.around(x,5), [t2,t6,fit,brate])]
 
+time2 = t.time()
 data = pd.DataFrame({
     "t2"     :  t2,
     "t6"     :  t6,
@@ -411,7 +411,6 @@ data = pd.DataFrame({
 
 if outdir:
     data.to_parquet(os.path.join(outdir,f'data{instance}.parquet'))
-
     for folder in ['fit', 'brate','t2','t6']:
         os.makedirs(os.path.join(outdir,folder), exist_ok=True)
     with open(os.path.join(outdir,'t2','t2_i{}.csv'.format(instance)), 'w',newline='') as filein:
@@ -426,3 +425,5 @@ if outdir:
     with open(os.path.join(outdir,'brate','brate_i{}.csv'.format(instance)), 'w',newline='') as filein:
         writer = csv.writer(filein)
         writer.writerows([brate])
+
+print("***** \t\t\tWalltime : {}".format(time2-time1))

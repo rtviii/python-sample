@@ -38,6 +38,9 @@ exp = 7
 
 
 # print( con)
+
+
+# print( con)
 time = np.arange(len(fit))
 time2 = np.arange(len(rcpt))
 
@@ -47,17 +50,20 @@ axarr[0,0].plot(time, t1, label="Type 1", color="blue")
 axarr[0,0].set_ylabel('Individual Count')
 axarr[0,0].legend()
 
-axarr[0,1].plot(time, fit, label="Fitness")
+axarr[0,1].plot(time, fit, label="Fitness", color='blue')
 axarr[0,1].set_ylabel('Populationwide Fitness')
 
-axarr[1,1,].plot(time, brate, label="Birthrate")
+axarr[1,1,].plot(time, brate, label="Birthrate", color='blue')
 axarr[1,1].set_ylabel('Birthrate')
 
-axarr[1,0].plot(time2, cnt, label="Connectivity (Avg. per gene)")
-axarr[1,0].plot(time2, rcpt, label="Receptivity (Avg. per trait)")
-axarr[1,0].plot([], [],'*', label="Every 10k iterations")
-axarr[1,0].legend()
-axarr[1,0].set_ylabel('Connectivity')
+axarr[1,0].plot(time2, cnt, label="Connectivity(per-gene)", color='grey')
+axarr[1,0].tick_params(axis='y', labelcolor="grey")
+ax2 = axarr[1,0].twinx()
+ax2.plot(time2, rcpt, label="Receptivity(per-trait)", color='orange')
+ax2.tick_params(axis='y', labelcolor="orange")
+axarr[1,0].legend(loc="upper right", bbox_to_anchor=(0.7,0.4))
+ax2.legend(loc="upper right", bbox_to_anchor=(0.7,0.2))
+
 
 figure = plt.gcf()
 figure.suptitle(f"Experimet{exp}")

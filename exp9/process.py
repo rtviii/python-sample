@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 
 
 
-t1     =  pd.DataFrame()
+t6     =  pd.DataFrame()
 fit    =  pd.DataFrame()
 brate  =  pd.DataFrame()
 cnt    =  pd.DataFrame()
@@ -19,21 +19,21 @@ for _,i in  enumerate(glob.glob('./connectivity*')):
 cnt   =  cnt.mean(axis=1)
 rcpt  =  rcpt.mean(axis=1)
 
-
 for _,i in  enumerate(glob.glob('./data*')):
-    df  =  pd.read_parquet(i)
-    fit  [_]  =  df['fit']
-    t1   [_]  =  df['t1']
-    brate[_]  =  df['brate']
+    if _ < 15:
+        df  =  pd.read_parquet(i)
+        fit  [_]  =  df['fit']
+        t6   [_]  =  df['t6']
+        brate[_]  =  df['brate']
+    else:
+        break
 
-t1     =  t1.mean(axis=1)
+t6     =  t6.mean(axis=1)
 brate  =  brate.mean(axis=1)
 fit    =  fit.mean(axis=1)
 
 
-exp = 7
-
-
+exp = 9
 
 
 
@@ -43,21 +43,24 @@ time2 = np.arange(len(rcpt))
 
 figur, axarr = plt.subplots(2,2)
 
-axarr[0,0].plot(time, t1, label="Type 1", color="blue")
+axarr[0,0].plot(time, t6, label="Type 6", color="blue")
 axarr[0,0].set_ylabel('Individual Count')
 axarr[0,0].legend()
 
-axarr[0,1].plot(time, fit, label="Fitness")
+axarr[0,1].plot(time, fit, label="Fitness", color='blue')
 axarr[0,1].set_ylabel('Populationwide Fitness')
 
-axarr[1,1,].plot(time, brate, label="Birthrate")
+axarr[1,1,].plot(time, brate, label="Birthrate", color='blue')
 axarr[1,1].set_ylabel('Birthrate')
 
-axarr[1,0].plot(time2, cnt, label="Connectivity")
-axarr[1,0].plot(time2, rcpt, label="Connectivity")
-axarr[1,0].plot([], [],'*', label="Every 10k iterations")
+axarr[1,0].plot(time2, cnt, label="Connectivity(per-gene)", color='grey')
+axarr[1,0].tick_params(axis='y', labelcolor="grey")
+ax2 = axarr[1,0].twinx()
+ax2.plot(time2, rcpt, label="Receptivity(per-trait)", color='orange')
+ax2.tick_params(axis='y', labelcolor="orange")
 axarr[1,0].legend()
-axarr[1,0].set_ylabel('Connectivity')
+ax2.legend()
+
 
 figure = plt.gcf()
 figure.suptitle(f"Experimet{exp}")
