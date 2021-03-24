@@ -24,7 +24,7 @@ def dir_path(string):
             raise PermissionError(string)
 
 parser = argparse.ArgumentParser(description='Simulation presets')
-parser.add_argument('-save','--outdir', type=dir_path, help="""Specify the path to write the results of the simulation.""")
+parser.add_argument('-o','--outdir', type=dir_path, help="""Specify the path to write the results of the simulation.""")
 parser.add_argument("-it", "--itern", type=int, help="The number of iterations")
 parser.add_argument("-sim", "--siminst", type=int, help="Simulation tag for the current instance.")
 parser.add_argument("-SP", "--shifting_peak", type=int, choices=[-1,0,1], help="Flag for whether the fitness landscape changes or not.")
@@ -36,7 +36,8 @@ itern          =  int(args.itern if args.itern is not None else 0)
 instance       =  int(args.siminst if args.siminst is not None else 0)
 toplot         =  bool(args.toplot if args.toplot is not None else 0)
 shifting_peak  =  args.shifting_peak if args.shifting_peak is not None else 0
-outdir         =  args.outdir if args.toplot is not None else 0
+outdir         =  args.outdir if args.outdir is not None else 0
+print("OUTDIR:::::::::" ,outdir)
 
 
 MUTATION_RATE_ALLELE          =  0.0001
@@ -46,7 +47,6 @@ MUTATION_RATE_CONTRIB_CHANGE  =  0.0
 DEGREE                        =  1
 BRATE_DENOM                   =  0.001
 SHIFTING_FITNESS_PEAK         =  False or shifting_peak
-#
 COUNTER_RESET                 =  1024*8
 
 INDIVIDUAL_INITS              =  {   
@@ -200,6 +200,7 @@ class Population:
     def birth_death_event(self, curr_iter)->None:
 
         if curr_iter == 0 or not curr_iter%COUNTER_RESET:
+            print("\t[Fitness recalculated]")
             for individual in self.population:
                 individual.calculate_fitness(self.fitmap.getMap())
 
@@ -363,21 +364,24 @@ t2         =  []
 t1         =  []
 fit        =  []
 brate      =  []
-lsc  =  np.array([], ndmin=2)
 
 
 mean                 =  np.array([0.0,0.0,0.0,0.0], dtype=np.float64)
 ASYM_SWITCH          =  False
-LANDSCAPE_INCREMENT  =  0.1
+LANDSCAPE_INCREMENT  =  0.01
 
+
+time1 = time.time()
 
 for it in range(itern):
+    if not it % 10000:
+        print("[{} 1e4]: poplen = {}| Elapsed since last iteration :{}\n".format(it,population_proper.poplen, time.time() - time1))
+        time1=time.time()
     if not it % 1000:
 	    t2.append(population_proper.typecount_dict[2])
 	    t1.append(population_proper.typecount_dict[1])
 	    fit.append(population_proper.average_fitness)
 	    brate.append(population_proper.brate)
-    lsc= np.append(lsc, mean)
 
 
 
@@ -400,7 +404,6 @@ for it in range(itern):
         population_proper.fitmap.mean = mean
     population_proper.birth_death_event(it)
 
-lsc = np.reshape(lsc, (-1,4))
 
 [t2,t1,fit,brate]=[*map(lambda x: np.around(x,5), [t2,t1,fit,brate])]
 
