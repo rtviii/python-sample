@@ -2,4 +2,5 @@ venv
 **.csv
 **.png
 **.zip
+**.parquet
 march18results/**
