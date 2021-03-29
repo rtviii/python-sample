@@ -9,6 +9,14 @@ from typing import  Callable, List, Tuple
 import math
 import argparse
 import pandas as pd
+import matplotlib.pyplot as plt
+
+VERBOSE = False
+
+def vprint(_: str):
+    if VERBOSE:
+        print(_)
+
 
 def dir_path(string):
     if string == "0":
@@ -29,26 +37,34 @@ parser.add_argument("-it", "--itern", type=int, help="The number of iterations")
 parser.add_argument("-sim", "--siminst", type=int, help="Simulation tag for the current instance.")
 parser.add_argument("-SP", "--shifting_peak", type=int, choices=[-1,0,1], help="Flag for whether the fitness landscape changes or not.")
 parser.add_argument("-plot", "--toplot", type=int, choices=[0,1])
+parser.add_argument("-con", "--connectivity", type=int, choices=[0,1])
+parser.add_argument("-V", "--verbose", type=int, choices=[0,1])
 
 
-args           =  parser.parse_args()
-itern          =  int(args.itern if args.itern is not None else 0)
-instance       =  int(args.siminst if args.siminst is not None else 0)
-toplot         =  bool(args.toplot if args.toplot is not None else 0)
-shifting_peak  =  args.shifting_peak if args.shifting_peak is not None else 0
-outdir         =  args.outdir if args.toplot is not None else 0
+args                          =  parser.parse_args()
+itern                         =  int(args.itern if args.itern is not None else 0)
+instance                      =  int(args.siminst if args.siminst is not None else 0)
+toplot                        =  bool(args.toplot if args.toplot is not None else 0)
+outdir                        =  args.outdir if args.toplot is not None else 0
 
-
-MUTATION_RATE_ALLELE          =  0.0001
+VERBOSE                       =  True if args.verbose is not None and args.verbose !=0 else False
+SHIFTING_FITNESS_PEAK         =  args.shifting_peak if args.shifting_peak is not None else False
+CONNECTIVITY_FLAG             =  args.connectivity if args.connectivity is not None else False
+CON_SPARSE                    =  1000
+MUTATION_RATE_ALLELE          =  0.001
 MUTATION_VARIANTS_ALLELE      =  np.arange(-1,1,0.01)
-MUTATION_RATE_DUPLICATION     =  0.0
-MUTATION_RATE_CONTRIB_CHANGE  =  0.0
+MUTATION_RATE_DUPLICATION     =  0
+MUTATION_RATE_CONTRIB_CHANGE  =  0
 DEGREE                        =  1
-BRATE_DENOM                   =  0.001
-SHIFTING_FITNESS_PEAK         =  False or shifting_peak
-#
-COUNTER_RESET                 =  1024 
-INDIVIDUAL_INITS              =  {   
+BRATE_DENOM                   =  0.0005
+COUNTER_RESET                 =  1024 * 8
+STD                           =  1
+AMPLITUDE                     =  1
+LANDSCAPE_INCREMENT           =  0.25
+
+INDIVIDUAL_INITS     =  {   
+
+
     "1.1":{
         'trait_n' :3,
         'alleles'       :  np.array([1.0, 1.0, 0], dtype=np.float64),
@@ -101,10 +117,10 @@ INDIVIDUAL_INITS              =  {
 
 class Fitmap():
 
-    def __init__(self,std:float, amplitude:float, mean:float):
+    def __init__(self,std:float, amplitude:float, mean):
         self.std        :  float = std
         self.amplitude  :  float = amplitude
-        self.mean       :  float = mean
+        self.mean          = mean
 
     def getMap(self):
         def _(phenotype):
@@ -120,9 +136,10 @@ class GPMap():
         self.genome_length  =  len(alleles) #? could always set this to the first dim of coeff_mat, but keeping this for verification
         self.coeffs_mat   =  None 
         self.degrees_mat  =  None
-        
+
         self.deg_init()     # Initialized to defaults when the object is created
         self.coef_init()    
+
     def coef_init(self, custom_coeffs=None):
         if custom_coeffs is not None: 
             self.coeffs_mat = custom_coeffs
@@ -134,6 +151,7 @@ class GPMap():
                     coeffs[x][x] = 1
             self.coeffs_mat = coeffs
             return 
+
     def deg_init(self, custom_degrees=None):
         if custom_degrees is not None: 
             self.degrees_mat = custom_degrees
@@ -141,17 +159,32 @@ class GPMap():
         else:
             self.degrees_mat = np.full((self.trait_n,self.genome_length), fill_value=1)
             return 
+
     def _geneVersatility(self)->float:
         [m,n]  =  np.shape(self.coeffs_mat)
-        return np.mean([np.linalg.norm(self.coeffs_mat[:,gene])/m for gene in range(n)])
+        total = 0
+        for i in range(n):
+            active =0 
+            for x in self.coeffs_mat[:,i]:
+                if x != 0:
+                    active +=1
+            total+=active
+        return total/m
+
     def _traitReceptivity(self)->float:
         [m,n]  =  np.shape(self.coeffs_mat)
-        return np.mean([np.linalg.norm(self.coeffs_mat[trait,:])/n for trait in range(m)])
+        total = 0
+        for i in range(m):
+            active =0 
+            for x in self.coeffs_mat[i,:]:
+                if x != 0:
+                    active +=1
+            total+=active
+        return total/n
+
     def get_connectivity(self)->Tuple[float,float]:
         """Returns a tuple of normalized (gen"""
         return (self._geneVersatility(),self._traitReceptivity())
-
-
 
     def map_phenotype(self)->List[float]:
 
@@ -198,7 +231,7 @@ class Population:
 
     def birth_death_event(self, curr_iter)->None:
 
-        if curr_iter == 0 or not curr_iter%COUNTER_RESET:
+        if ( curr_iter == 0 ) or ( not curr_iter%COUNTER_RESET ):
             for individual in self.population:
                 individual.calculate_fitness(self.fitmap.getMap())
 
@@ -349,76 +382,108 @@ def createIdividual(dicttype:str, ind_type)->Individ_T:
     gpmap.coef_init(custom_coeffs=inits['coefficients'])
     return Individ_T(inits['alleles'], gpmap,ind_type)
 
-
 POPULATION = [ ]
-for _ in range(400):
-    POPULATION.append(createIdividual("2",2))
-    POPULATION.append(createIdividual("6",6))
 
-_Fitmap            =  Fitmap(amplitude=1,std=1,mean=0)
+for _ in range(400):
+    POPULATION.append(createIdividual("1.4",1))
+
+_Fitmap            =  Fitmap(amplitude=AMPLITUDE,std=STD,mean=[0,0,0,0])
 population_proper  =  Population(_Fitmap,initial_population=POPULATION)
 
-t2         =  []
-t6         =  []
+t1         =  []
 fit        =  []
 brate      =  []
-lsc  =  np.array([], ndmin=2)
+if SHIFTING_FITNESS_PEAK:
+    lsc  =  np.array([], ndmin=2)
+if CONNECTIVITY_FLAG:
+    cnt   =  []
+    rcpt  =  []
 
 
 mean                 =  np.array([0.0,0.0,0.0,0.0], dtype=np.float64)
 ASYM_SWITCH          =  False
-LANDSCAPE_INCREMENT  =  0.01
 
-
-time1 = t.time()
 
 for it in range(itern):
-    t2.append(population_proper.typecount_dict[2])
-    t6.append(population_proper.typecount_dict[6])
+    if not it %1000:
+        vprint("Iteration {}. Popsize :{}".format(it, population_proper.poplen))
+    # print("iter {}".format(it))
+    t1.append(population_proper.typecount_dict[1])
     fit.append(population_proper.average_fitness)
     brate.append(population_proper.brate)
-    lsc= np.append(lsc, mean)
 
-    if not (it + 1 )  & (COUNTER_RESET -1 ) and SHIFTING_FITNESS_PEAK:
-        
+
+    if (not  it % CON_SPARSE ) &  CONNECTIVITY_FLAG :
+        if population_proper.typecount_dict[1] > 0:
+            [t1t,t1g] = population_proper.getAvgConnectivityForType(1)
+        else:
+            [t1t,t1g] = [0,0]
+
+        cnt.append(t1t)
+        rcpt.append(t1g)
+
+    if SHIFTING_FITNESS_PEAK:
+        lsc= np.append(lsc, mean)
+    if (not (it + 1 )  & (COUNTER_RESET -1 ) ) and SHIFTING_FITNESS_PEAK:
+        #! Correlated
         if SHIFTING_FITNESS_PEAK == 1:
+
             mean[0:2] +=LANDSCAPE_INCREMENT; mean[2:]-=LANDSCAPE_INCREMENT;
             if np.max(mean) > 0.9:
                 LANDSCAPE_INCREMENT    =  -LANDSCAPE_INCREMENT
-        else:
-            if np.max(mean) < 0.01:
-                ASYM_SWITCH            =  not ASYM_SWITCH
-            if np.max(mean) > 0.9:
-                LANDSCAPE_INCREMENT    =  -LANDSCAPE_INCREMENT
 
-            if ASYM_SWITCH:
-                mean[[0,2]] -=LANDSCAPE_INCREMENT; mean[[1,3]]+=LANDSCAPE_INCREMENT;
-            else: 
-                mean[[1,3]] -=LANDSCAPE_INCREMENT; mean[[0,2]]+=LANDSCAPE_INCREMENT;
+        else:
+        #! Uncorrelated
+            mean =  np.random.choice([ -1,0.5,0,0.5,1 ],4)
+            
+            
+            # if np.max(mean) < 0.01:
+            #     ASYM_SWITCH            =  not ASYM_SWITCH
+            # if np.max(mean) > 0.9:
+            #     LANDSCAPE_INCREMENT    =  -LANDSCAPE_INCREMENT
+
+            # if ASYM_SWITCH:
+            #     mean[[0,2]] -=LANDSCAPE_INCREMENT; mean[[1,3]]+=LANDSCAPE_INCREMENT;
+            # else: 
+            #     mean[[1,3]] -=LANDSCAPE_INCREMENT; mean[[0,2]]+=LANDSCAPE_INCREMENT;
+
+        vprint("new  mean:{}".format(mean))
         population_proper.fitmap.mean = mean
     population_proper.birth_death_event(it)
 
-lsc = np.reshape(lsc, (-1,4))
-[t2,t6,fit,brate]=[*map(lambda x: np.around(x,5), [t2,t6,fit,brate])]
+if SHIFTING_FITNESS_PEAK:
+    lsc = np.reshape(lsc, (-1,4))
 
-time2 = t.time()
+[t1,fit,brate]=[*map(lambda x: np.around(x,5), [t1,fit,brate])]
+
 data = pd.DataFrame({
-    "t2"     :  t2,
-    "t6"     :  t6,
+    "t1"     :  t1,
     "fit"    :  fit,
     "brate"  :  brate,
 })
+if SHIFTING_FITNESS_PEAK:
+    data['mean0'] = lsc[:,0]
+    data['mean1'] = lsc[:,1]
+    data['mean2'] = lsc[:,2]
+    data['mean3'] = lsc[:,3]
+
+if CONNECTIVITY_FLAG:
+    connectivity = pd.DataFrame({
+            "cnt"   :  cnt,
+            "rcpt"  :  rcpt
+        })
+
 
 if outdir:
     data.to_parquet(os.path.join(outdir,f'data{instance}.parquet'))
-    for folder in ['fit', 'brate','t2','t6']:
+    if CONNECTIVITY_FLAG:
+        connectivity.to_parquet(os.path.join(outdir,f'data{instance}.parquet'))
+
+    for folder in ['fit', 'brate','t1']:
         os.makedirs(os.path.join(outdir,folder), exist_ok=True)
-    with open(os.path.join(outdir,'t2','t2_i{}.csv'.format(instance)), 'w',newline='') as filein:
+    with open(os.path.join(outdir,'t1','t1_i{}.csv'.format(instance)), 'w',newline='') as filein:
         writer = csv.writer(filein)
-        writer.writerows([t2])
-    with open(os.path.join(outdir,'t6','t6_i{}.csv'.format(instance)), 'w',newline='') as filein:
-        writer = csv.writer(filein)
-        writer.writerows([t6])
+        writer.writerows([t1])
     with open(os.path.join(outdir,'fit','fit_i{}.csv'.format(instance)), 'w',newline='') as filein:
         writer = csv.writer(filein)
         writer.writerows([fit])
@@ -426,4 +491,39 @@ if outdir:
         writer = csv.writer(filein)
         writer.writerows([brate])
 
-print("***** \t\t\tWalltime : {}".format(time2-time1))
+if toplot:
+    time = np.arange(len(fit))
+    figur, axarr = plt.subplots(2,2)
+    axarr[0,0].plot(time, t1, label="Type 1", color="green")
+    axarr[0,0].set_ylabel('Individual Count')
+    axarr[0,0].legend()
+
+    axarr[0,1].plot(time, fit, label="Fitness")
+    axarr[0,1].set_ylabel('Populationwide Fitness')
+
+    axarr[1,1].plot(time, brate, label="Birthrate")
+    axarr[1,1].set_ylabel('Birthrate')
+
+
+    if SHIFTING_FITNESS_PEAK:
+        time2= np.arange(len(lsc[:,0]))
+        axarr[1,0].plot(time2,lsc[:,0], label="Mean 1", c="cyan")
+        axarr[1,0].plot(time2,lsc[:,1], label="Mean 2", c="black")
+        axarr[1,0].plot(time2,lsc[:,2], label="Mean 3", c="brown")
+        axarr[1,0].plot(time2,lsc[:,3], label="Mean 4", c="yellow")
+        axarr[1,0].legend()
+
+
+    if CONNECTIVITY_FLAG:
+        time2 = np.arange(len(cnt))
+        axarr[1,0].plot(time2, cnt,'-', label="T1 Connectivity",c='blue')
+        axarr[1,0].plot(time2, rcpt,'-', label="T1 Receptivity",c='lightblue')
+        axarr[1,0].plot([],[],'*', label="(Every 100 iterations)")
+        axarr[1,0].set_ylabel('Connectivity')
+        axarr[1,0].legend()
+
+    figure = plt.gcf()
+    figure.suptitle("Experiment 7")
+    figure.set_size_inches(12, 6)
+    figure.text(0.5, 0.04, 'BD Process Iteration', ha='center', va='center')
+    plt.show()

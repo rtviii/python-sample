@@ -50,57 +50,36 @@ brate    =   pd.read_csv(bratepath, header=None, sep=' ', delimiter=' ').iloc[0]
 norm6    =   pd.read_csv(norm6path, header=None, sep=' ', delimiter=' ').iloc[0] 
 
 time = np.arange(len(fit))
+figur, axarr = plt.subplots(2,2)
+axarr[0,0].plot(time, t1, label="Type 1", color="green")
+axarr[0,0].set_ylabel('Individual Count')
+axarr[0,0].legend()
 
-figur, axarr = plt.subplots(4)
+axarr[0,1].plot(time, fit, label="Fitness")
+axarr[0,1].set_ylabel('Populationwide Fitness')
 
-# axarr[0].plot(time, t1, label="Type 1", color="blue")
-axarr[0].plot(time, t6, label="Type 6", color="green")
-# axarr[0].plot(time, t6, label="Type 6", color="orange")
-axarr[0].set_ylabel('Individual Count')
-axarr[0].legend()
+axarr[1,1].plot(time, brate, label="Birthrate")
+axarr[1,1].set_ylabel('Birthrate')
 
-axarr[1].plot(time, fit, label="Fitness")
-axarr[1].set_ylabel('Populationwide Fitness')
 
-axarr[2].plot(time, brate, label="Birthrate")
-axarr[2].set_ylabel('Birthrate')
+if SHIFTING_FITNESS_PEAK:
+    time2= np.arange(len(lsc[:,0]))
+    axarr[1,0].plot(time2,lsc[:,0], label="Mean 1", c="cyan")
+    axarr[1,0].plot(time2,lsc[:,1], label="Mean 2", c="black")
+    axarr[1,0].plot(time2,lsc[:,2], label="Mean 3", c="brown")
+    axarr[1,0].plot(time2,lsc[:,3], label="Mean 4", c="yellow")
+    axarr[1,0].legend()
 
-# axarr[3].plot(time, norm6, label="Connectivity")
-# axarr[3].set_ylabel('Connectivity | Frob. Norm')
+
+if CONNECTIVITY_FLAG:
+    time2 = np.arange(len(cnt))
+    axarr[1,0].plot(time2, cnt,'-', label="T1 Connectivity",c='blue')
+    axarr[1,0].plot(time2, rcpt,'-', label="T1 Receptivity",c='lightblue')
+    axarr[1,0].plot([],[],'*', label="(Every 100 iterations)")
+    axarr[1,0].set_ylabel('Connectivity')
+    axarr[1,0].legend()
 
 figure = plt.gcf()
-figure.suptitle(f"Experimet{exp}")
 figure.set_size_inches(12, 6)
-figure.text(0.5, 0.04, 'BD Process Iteration(every 1k)', ha='center', va='center')
+figure.text(0.5, 0.04, 'BD Process Iteration', ha='center', va='center')
 plt.show()
-
-
-
-
-#! SHIFTING PEAK
-
-# if toplot:
-#     time = np.arange(len(fit))
-#     figur, axarr = plt.subplots(2,2)
-#     axarr[0,0].plot(time, t2, label="Type 2", color="green")
-#     axarr[0,0].plot(time, t6, label="Type 6", color="pink")
-#     axarr[0,0].set_ylabel('Individual Count')
-#     axarr[0,0].legend()
-
-#     axarr[0,1].plot(time, fit, label="Fitness")
-#     axarr[0,1].set_ylabel('Populationwide Fitness')
-
-#     axarr[1,1].plot(time, brate, label="Birthrate")
-#     axarr[1,1].set_ylabel('Birthrate')
-
-#     axarr[1,0].plot(np.arange(len(lsc[ :,0 ])),lsc[ :,0], label="(Every 100 iterations)")
-#     axarr[1,0].plot(np.arange(len(lsc[ :,1 ])),lsc[ :,1], label="(Every 100 iterations)")
-#     axarr[1,0].plot(np.arange(len(lsc[ :,2 ])),lsc[ :,2], label="(Every 100 iterations)")
-#     axarr[1,0].plot( np.arange(len(lsc[ :,3])),lsc[ :,3], label="(Every 100 iterations)")
-#     # axarr[1,0].set_ylabel('Connectivity')
-#     axarr[1,0].legend()
-
-#     figure = plt.gcf()
-#     figure.set_size_inches(12, 6)
-#     figure.text(0.5, 0.04, 'BD Process Iteration', ha='center', va='center')
-#     plt.show()
