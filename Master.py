@@ -10,6 +10,7 @@ import math
 import argparse
 import pandas as pd
 import matplotlib.pyplot as plt
+from matplotlib.patches import Rectangle
 
 VERBOSE = False
 
@@ -38,51 +39,38 @@ parser.add_argument("-sim", "--siminst", type=int, help="Simulation tag for the 
 parser.add_argument("-SP", "--shifting_peak", type=int, choices=[-1,0,1], help="Flag for whether the fitness landscape changes or not.")
 parser.add_argument("-plot", "--toplot", type=int, choices=[0,1])
 parser.add_argument("-con", "--connectivity", type=int, choices=[0,1])
+parser.add_argument("-exp", "--experiment", type=int)
+# parser.add_argument('-t','--type', nargs='+', required=True, help='Types involved in experiment')
+parser.add_argument('-t','--type', type=int,required=True, help='Types involved in experiment')
 parser.add_argument("-V", "--verbose", type=int, choices=[0,1])
 
 
-args                          =  parser.parse_args()
-itern                         =  int(args.itern if args.itern is not None else 0)
-instance                      =  int(args.siminst if args.siminst is not None else 0)
-toplot                        =  bool(args.toplot if args.toplot is not None else 0)
-outdir                        =  args.outdir if args.toplot is not None else 0
-
-VERBOSE                       =  True if args.verbose is not None and args.verbose !=0 else False
+args      =  parser.parse_args()
+itern     =  int(args.itern if args.itern is not None else 0)
+instance  =  int(args.siminst if args.siminst is not None else 0)
+toplot    =  bool(args.toplot if args.toplot is not None else 0)
+outdir    =  args.outdir if args.toplot is not None else 0
+INDTYPE   =  args.type
+EXPERIMENT                    =  args.experiment if args.experiment is not None else "Unspecified"
+VERBOSE                       =  True if args.verbose is not None and args.verbose !=  0 else False
 SHIFTING_FITNESS_PEAK         =  args.shifting_peak if args.shifting_peak is not None else False
 CONNECTIVITY_FLAG             =  args.connectivity if args.connectivity is not None else False
 CON_SPARSE                    =  1000
-MUTATION_RATE_ALLELE          =  0.001
+MUTATION_RATE_ALLELE          =  0.0001
 MUTATION_VARIANTS_ALLELE      =  np.arange(-1,1,0.01)
 MUTATION_RATE_DUPLICATION     =  0
 MUTATION_RATE_CONTRIB_CHANGE  =  0
 DEGREE                        =  1
-BRATE_DENOM                   =  0.0005
+BRATE_DENOM                   =  0.001
 COUNTER_RESET                 =  1024 * 8
 STD                           =  1
 AMPLITUDE                     =  1
-LANDSCAPE_INCREMENT           =  0.25
+LANDSCAPE_INCREMENT           =  0.5
 
 INDIVIDUAL_INITS     =  {   
 
 
-    "1.1":{
-        'trait_n' :3,
-        'alleles'       :  np.array([1.0, 1.0, 0], dtype=np.float64),
-        'coefficients'  :  np.array([
-                        [1,0,0],
-                        [0,1,0],
-                        [0,0,1],
-                    ], dtype=np.float64)
-   },
-   "1.2":{
-        'trait_n' :2,
-        'alleles'       :  np.array([1.0,1.0], dtype=np.float64),
-        'coefficients'  :  np.array([
-                        [1.0,0.0],
-                        [0.0,1.0]]
-                        , dtype=np.float64)
-   },
-   "1.4":{
+   "1":{
         'trait_n' :4,
         'alleles'       :  np.array([1,1,1,1], dtype=np.float64),
         'coefficients'  :  np.array([
@@ -126,7 +114,6 @@ class Fitmap():
         def _(phenotype):
             return self.amplitude*math.exp(-(np.sum(((phenotype - self.mean)**2)/(2*self.std**2))))
         return _
-
 class GPMap():
 
     def __init__(self,alleles:np.ndarray, trait_n:int, deg:int) -> None:
@@ -197,7 +184,6 @@ class GPMap():
         """
         
         return  np.sum(self.coeffs_mat * ( self.alleles ** self.degrees_mat), axis=1)
-
 class Population:
     def __init__(self, fitmap:Fitmap, initial_population=[]):
 
@@ -279,7 +265,6 @@ class Population:
         self.fitmap.amplitude  =  kwargs['amplitude'] if 'amplitude' in kwargs else self.fitmap.amplitude
         self.fitmap.std        =  kwargs['std'] if 'std' in kwargs else self.fitmap.std
         # print("Fimap is now std{} | mean{} | ampli {}".format(self.fitmap.std,self.fitmap.mean,self.fitmap.amplitude))
-
 class Individ_T:
     def __init__(self, alleles:np.ndarray, gp_map:GPMap, ind_type:int):
         self.ind_type   =  ind_type
@@ -384,15 +369,16 @@ def createIdividual(dicttype:str, ind_type)->Individ_T:
 
 POPULATION = [ ]
 
-for _ in range(400):
-    POPULATION.append(createIdividual("1.4",1))
+for _ in range(800):
+    POPULATION.append(createIdividual(str(INDTYPE),INDTYPE))
 
 _Fitmap            =  Fitmap(amplitude=AMPLITUDE,std=STD,mean=[0,0,0,0])
 population_proper  =  Population(_Fitmap,initial_population=POPULATION)
 
-t1         =  []
+count         =  []
 fit        =  []
 brate      =  []
+
 if SHIFTING_FITNESS_PEAK:
     lsc  =  np.array([], ndmin=2)
 if CONNECTIVITY_FLAG:
@@ -400,15 +386,16 @@ if CONNECTIVITY_FLAG:
     rcpt  =  []
 
 
-mean                 =  np.array([0.0,0.0,0.0,0.0], dtype=np.float64)
-ASYM_SWITCH          =  False
+mean         =  np.array([0.0,0.0,0.0,0.0], dtype=np.float64)
+ASYM_SWITCH  =  False
+EXTINCTION   =  False
 
 
 for it in range(itern):
-    if not it %1000:
-        vprint("Iteration {}. Popsize :{}".format(it, population_proper.poplen))
-    # print("iter {}".format(it))
-    t1.append(population_proper.typecount_dict[1])
+    if population_proper.poplen == 0:
+        EXTINCTION = True
+        break
+    count.append(population_proper.typecount_dict[INDTYPE])
     fit.append(population_proper.average_fitness)
     brate.append(population_proper.brate)
 
@@ -424,8 +411,7 @@ for it in range(itern):
 
     if SHIFTING_FITNESS_PEAK:
         lsc= np.append(lsc, mean)
-    if (not (it + 1 )  & (COUNTER_RESET -1 ) ) and SHIFTING_FITNESS_PEAK:
-        #! Correlated
+    if (not (it + 1 )  & (COUNTER_RESET -1 ) ) and SHIFTING_FITNESS_PEAK:        #! Correlated
         if SHIFTING_FITNESS_PEAK == 1:
 
             mean[0:2] +=LANDSCAPE_INCREMENT; mean[2:]-=LANDSCAPE_INCREMENT;
@@ -435,31 +421,18 @@ for it in range(itern):
         else:
         #! Uncorrelated
             mean =  np.random.choice([ -1,0.5,0,0.5,1 ],4)
-            
-            
-            # if np.max(mean) < 0.01:
-            #     ASYM_SWITCH            =  not ASYM_SWITCH
-            # if np.max(mean) > 0.9:
-            #     LANDSCAPE_INCREMENT    =  -LANDSCAPE_INCREMENT
-
-            # if ASYM_SWITCH:
-            #     mean[[0,2]] -=LANDSCAPE_INCREMENT; mean[[1,3]]+=LANDSCAPE_INCREMENT;
-            # else: 
-            #     mean[[1,3]] -=LANDSCAPE_INCREMENT; mean[[0,2]]+=LANDSCAPE_INCREMENT;
-
-        vprint("new  mean:{}".format(mean))
         population_proper.fitmap.mean = mean
     population_proper.birth_death_event(it)
 
 if SHIFTING_FITNESS_PEAK:
     lsc = np.reshape(lsc, (-1,4))
 
-[t1,fit,brate]=[*map(lambda x: np.around(x,5), [t1,fit,brate])]
+[count,fit,brate]=[*map(lambda x: np.around(x,5), [count,fit,brate])]
 
 data = pd.DataFrame({
-    "t1"     :  t1,
-    "fit"    :  fit,
-    "brate"  :  brate,
+    f"t{INDTYPE}"  :  count,
+      "fit"        :  fit,
+      "brate"      :  brate,
 })
 if SHIFTING_FITNESS_PEAK:
     data['mean0'] = lsc[:,0]
@@ -479,11 +452,11 @@ if outdir:
     if CONNECTIVITY_FLAG:
         connectivity.to_parquet(os.path.join(outdir,f'data{instance}.parquet'))
 
-    for folder in ['fit', 'brate','t1']:
+    for folder in ['fit', 'brate',f"t{INDTYPE}"]:
         os.makedirs(os.path.join(outdir,folder), exist_ok=True)
-    with open(os.path.join(outdir,'t1','t1_i{}.csv'.format(instance)), 'w',newline='') as filein:
+    with open(os.path.join(outdir,'t{}'.format(INDTYPE),'t{}_i{}.csv'.format(INDTYPE,instance)), 'w',newline='') as filein:
         writer = csv.writer(filein)
-        writer.writerows([t1])
+        writer.writerows([count])
     with open(os.path.join(outdir,'fit','fit_i{}.csv'.format(instance)), 'w',newline='') as filein:
         writer = csv.writer(filein)
         writer.writerows([fit])
@@ -492,11 +465,13 @@ if outdir:
         writer.writerows([brate])
 
 if toplot:
+    tcolors = ['black','blue','green','black','black','black','pink']
     time = np.arange(len(fit))
     figur, axarr = plt.subplots(2,2)
-    axarr[0,0].plot(time, t1, label="Type 1", color="green")
+    axarr[0,0].plot(time, count, label="Type {}".format(INDTYPE), color=tcolors[INDTYPE])
     axarr[0,0].set_ylabel('Individual Count')
-    axarr[0,0].legend()
+    # extra = Rectangle((0, 0), 1, 1, fc="w", fill=False, edgecolor='none', linewidth=0)
+    # axarr[0,0].legend([extra],["std: | bratedenom: {} \n m1: {}\nm2:{} \n m3:{}".format(STD,BRATE_DENOM, MUTATION_RATE_ALLELE)])
 
     axarr[0,1].plot(time, fit, label="Fitness")
     axarr[0,1].set_ylabel('Populationwide Fitness')
@@ -513,7 +488,6 @@ if toplot:
         axarr[1,0].plot(time2,lsc[:,3], label="Mean 4", c="yellow")
         axarr[1,0].legend()
 
-
     if CONNECTIVITY_FLAG:
         time2 = np.arange(len(cnt))
         axarr[1,0].plot(time2, cnt,'-', label="T1 Connectivity",c='blue')
@@ -522,8 +496,12 @@ if toplot:
         axarr[1,0].set_ylabel('Connectivity')
         axarr[1,0].legend()
 
+    if EXTINCTION:
+        axarr[0,0].scatter(time[-1], 0, marker='H', s=50)
+        axarr[0,0].text(time[-1]+0.15, 0+0.15, s="EXTINCTION")
+
     figure = plt.gcf()
-    figure.suptitle("Experiment 7")
+    figure.suptitle("Experiment {}".format(EXPERIMENT))
     figure.set_size_inches(12, 6)
     figure.text(0.5, 0.04, 'BD Process Iteration', ha='center', va='center')
     plt.show()
