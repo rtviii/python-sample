@@ -8,9 +8,9 @@ import matplotlib.pyplot as plt
 import re
 
 
-exp = 19
+exp = 17
 indir = '/home/rtviii/dev/polygenicity-simulations/polygen'
-itype = 1
+itype = 2
 
 
 sim = int(re.search(r'\d+', sys.argv[1]).group())
@@ -20,10 +20,10 @@ fitp    =  os.path.join(indir,f"exp{exp}",'fit',f'fit_i{sim}.csv')
 bratep  =  os.path.join(indir,f"exp{exp}",'brate',f'brate_i{sim}.csv')
 consp   =  os.path.join(indir,f"exp{exp}",f"data{sim}.parquet")
 
-count  =  pd.read_csv(countp, header=None).loc[0,:] 
-fit    =  pd.read_csv(fitp, header=None).loc[0,:] 
-brate  =  pd.read_csv(bratep, header=None).loc[0,:] 
-means  =  pd.read_parquet(consp)
+count   =  pd.read_csv(countp, header=None).loc[0,:]
+fit     =  pd.read_csv(fitp, header=None).loc[0,:]
+brate   =  pd.read_csv(bratep, header=None).loc[0,:]
+means   =  pd.read_parquet(consp)
 
 EXTINCTION = False
 

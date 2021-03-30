@@ -8,9 +8,10 @@ import matplotlib.pyplot as plt
 import re
 
 
-exp = 19
+exp = 18
 indir = '/home/rtviii/dev/polygenicity-simulations/polygen'
-itype = 1
+itype = 6
+sim = 10
 
 
 sim = int(re.search(r'\d+', sys.argv[1]).group())
@@ -64,6 +65,6 @@ figure = plt.gcf()
 figure.set_size_inches(20,8)
 plt.suptitle(f"Experiment {exp}")
 figure.text(0.5, 0.04, 'BD Process Iteration', ha='center', va='center')
-plt.savefig(os.path.join(indir,f"exp{exp}",f'Experiment{exp}_i{sim}'),dpi=100)
+plt.savefig(os.path.join(indir,f"exp{exp}",f'Experiment16_i{sim}'),dpi=100)
 print(f"Saved experiment {sim}")
 # plt.show()

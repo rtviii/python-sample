@@ -8,9 +8,10 @@ import matplotlib.pyplot as plt
 import re
 
 
-exp = 19
+exp = 20
 indir = '/home/rtviii/dev/polygenicity-simulations/polygen'
-itype = 1
+itype = 2
+sim = 10
 
 
 sim = int(re.search(r'\d+', sys.argv[1]).group())
