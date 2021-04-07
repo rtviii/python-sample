@@ -1,0 +1,12 @@
+=>> PBS: job killed: walltime 36240 exceeded limit 36000
+parallel: SIGTERM received. No new jobs will be started.
+parallel: Waiting for these 9 jobs to finish. Send SIGTERM again to stop now.
+parallel: python3 raw.py -it 3000000 -t 2 -save /scratch/ex-kdd-1/rxz/polygen/exp20/ -SP -1 -exp 20 -sim 84
+parallel: python3 raw.py -it 3000000 -t 2 -save /scratch/ex-kdd-1/rxz/polygen/exp20/ -SP -1 -exp 20 -sim 86
+parallel: python3 raw.py -it 3000000 -t 2 -save /scratch/ex-kdd-1/rxz/polygen/exp20/ -SP -1 -exp 20 -sim 89
+parallel: python3 raw.py -it 3000000 -t 2 -save /scratch/ex-kdd-1/rxz/polygen/exp20/ -SP -1 -exp 20 -sim 88
+parallel: python3 raw.py -it 3000000 -t 2 -save /scratch/ex-kdd-1/rxz/polygen/exp20/ -SP -1 -exp 20 -sim 83
+parallel: python3 raw.py -it 3000000 -t 2 -save /scratch/ex-kdd-1/rxz/polygen/exp20/ -SP -1 -exp 20 -sim 90
+parallel: python3 raw.py -it 3000000 -t 2 -save /scratch/ex-kdd-1/rxz/polygen/exp20/ -SP -1 -exp 20 -sim 87
+parallel: python3 raw.py -it 3000000 -t 2 -save /scratch/ex-kdd-1/rxz/polygen/exp20/ -SP -1 -exp 20 -sim 80
+parallel: python3 raw.py -it 3000000 -t 2 -save /scratch/ex-kdd-1/rxz/polygen/exp20/ -SP -1 -exp 20 -sim 82
