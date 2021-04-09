@@ -1,5 +1,4 @@
 strict digraph "" {
-	ROOT -> "4af";
 	"4af" -> "5af";
 	"4af" -> "5bf";
 	"4af" -> "5cf";

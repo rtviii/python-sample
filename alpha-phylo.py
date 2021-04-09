@@ -4,6 +4,7 @@ import functools
 from operator import xor
 from pprint import pprint
 import xxhash
+import networkx as nx
 import csv
 import sys, os
 import numpy as np
@@ -58,9 +59,9 @@ MUTATION_VARIANTS_ALLELE      =  np.arange(-1,1,0.01)
 MUTATION_RATE_DUPLICATION     =  0
 MUTATION_RATE_CONTRIB_CHANGE  =  0
 DEGREE                        =  1
-BRATE_DENOM                   =  0.001
+BRATE_DENOM                   =  0.01
 COUNTER_RESET                 =  1024*8
-STD                           =  0.5
+STD                           =  1
 AMPLITUDE                     =  1
 LANDSCAPE_INCREMENT           =  0.5
 
@@ -155,6 +156,9 @@ class Individual:
 
 class Universe:
     def __init__(self, initial_population:List[Individual], GPMap:GPMap,Fitmap:Fitmap) -> None:
+
+
+        self.phylogeny    =  nx.DiGraph()
         self.population   =  []
         self.GPMap        =  GPMap
         self.Fitmap       =  Fitmap
@@ -167,7 +171,7 @@ class Universe:
         self.brate = 0
 
         for i in initial_population:
-            self.birth(i)
+            self.birth(i,i)
     
         self.avg_fitness  =  self.get_avg_fitness()
         self.brate        =  ( self.avg_fitness )/( self.avg_fitness + self.poplen * BRATE_DENOM)
@@ -189,50 +193,64 @@ class Universe:
         self.drate         =  1 - self.brate
 
         pick =  np.random.choice([1, -1], p=[self.brate, self.drate])
+        
+        pick = 1
 
         def pick_genotype():
             genotypes      =  self.phenotypeHM.values()
             total_fitness  =  reduce(lambda t,h: t+h ,[*map(lambda x: x['n']*x['f'], genotypes)])
-            targets        =  [ self._hashalls(gtp['a'])           for gtp in    genotypes]
-            likelihoods    =  [gtp['n']*gtp['f']/total_fitness     for gtp in    genotypes]
+            targets        =  []
+            likelihoods    =  []
+            [targets.append( self._hashalls(gtp['a']) )          for gtp in    genotypes]
+            [likelihoods.append(gtp['n']*gtp['f']/total_fitness) for gtp in    genotypes]
             picked = np.random.choice(targets,p=likelihoods)
-
-            if VERBOSE :
-                print("Targets: \t", targets)
-                print("Likelihoods: \t",likelihoods)
-                print("Picked:\t",picked)
+            # if VERBOSE :
+            #     print("Targets:     \t", targets)
+            #     print("Likelihoods: \t", likelihoods)
+            #     print("Picked:      \t", picked)
             return self.phenotypeHM[picked]['a']
 
         if pick > 0:  
             chosen_alleles = pick_genotype()
-            u.birth(Individual(chosen_alleles,1).give_birth())
+            # print('chose alleles', chosen_alleles)
+            u.birth(Individual(chosen_alleles,1).give_birth(),Individual(chosen_alleles,1))
+
         else:
             chosen = np.random.choice(self.population)
             u.death(chosen)
 
     def death(self,_:Individual):
         self.phenotypeHM[self._hashalls(_.alleles)]['n']-=1
-        if self.phenotypeHM[self._hashalls(_.alleles)]['n'] == 0:
-            self.phenotypeHM.pop(self._hashalls(_.alleles))
+        # if self.phenotypeHM[self._hashalls(_.alleles)]['n'] == 0:
+        #     self.phenotypeHM.pop(self._hashalls(_.alleles))
         self.population.remove(_)
         self.poplen-=1
 
-    def birth(self,individ:Individual)->None:
+    def birth(self,nascent:Individual, parent:Individual)->None:
 
-        K = self._hashalls(individ.alleles)
+        # print("parent", parent.alleles, "gave birth to ", nascent.alleles)
 
+
+        childh   =  self._hashalls(nascent.alleles)
+        parenth  =  self._hashalls(parent.alleles)
+    
+        if  childh!=parenth:
+            self.phylogeny.add_node(childh)
+            self.phylogeny.add_edge(parenth,childh)
+
+        K = self._hashalls(nascent.alleles)
         if K in self.phenotypeHM:
-            #*Genotype is already present
-
-            self.population.append(individ)
+            #*Genotype is present
+            self.population.append(nascent)
             self.phenotypeHM [K]['n']+=1
             self.poplen +=1
 
         else:
-            fitval = self.get_fitness(individ)
-            self.population.append(individ)
+            self.phylogeny.add_node(childh)
+            fitval = self.get_fitness(nascent)
+            self.population.append(nascent)
             self.phenotypeHM[K] = {
-                'a':individ.alleles,
+                'a':nascent.alleles,
                 'f':fitval,
                 'n':1
             }
@@ -240,6 +258,7 @@ class Universe:
             
     def get_fitness(self,ind:Individual) -> float:
         K                 =  xxhash.xxh64(np.array2string(ind.alleles)).hexdigest()
+
         if K in self.phenotypeHM:
             return self.phenotypeHM[K]['f']
         else:
@@ -247,13 +266,13 @@ class Universe:
             fitval            =  self.Fitmap.getMap()(phenotype)
             return fitval
 
-
 count              =  []
 fit                =  []
 brate              =  []
 
 if SHIFTING_FITNESS_PEAK:
     lsc  =  np.array([], ndmin=2)
+
 if CONNECTIVITY_FLAG:
     cnt   =  []
     rcpt  =  []
@@ -264,97 +283,165 @@ ASYM_SWITCH  =  False
 EXTINCTION   =  False
 
 
+gpm1   =  GPMap(INDIVIDUAL_INITS['1']['coefficients'])
+ftm    =  Fitmap(1,1,[0,0,0,0])
+ind1   =  Individual(INDIVIDUAL_INITS['1']['alleles'], 1)
+ind11  =  Individual(np.array([1.0,0.0,0.0,0.0]), 1)
+# ind2   =  Individual(INDIVIDUAL_INITS['2']['alleles'], 2)
+u      =  Universe([ind1]*10 + [ind11]*10,gpm1,ftm)
+
+for i in range(itern):
+    u.tick(V=VERBOSE)
+pprint(u.phenotypeHM)
 
 
-gpm1  =  GPMap(INDIVIDUAL_INITS['1']['coefficients'])
-ftm   =  Fitmap(1,1,[0,0,0,0])
-ind1  =  Individual(INDIVIDUAL_INITS['1']['alleles'], 1)
-u     =  Universe([ind1]*400,gpm1,ftm)
+
+G      =  u.phylogeny
+pos    =  nx.layout.fruchterman_reingold_layout(G)
+
+hashes     =  {}
+stats      =  {}
+alls       =  { }
+count      =  {}
+alllabels  =  dict( nx.get_node_attributes(G,"alleles") )
 
 
-for it in range(itern):
+hashpos   =  {}
+allspos   =  {}
+countpos  =  {}
+for item in pos.items():
 
-    if u.poplen == 0:
-        EXTINCTION = True
-        break
+    hashpos [item[0]]   =  np.array([ item[1][0], item[1][1]+0.05 ])
+    allspos  [item[0]]  =  np.array([ item[1][0], item[1][1]-0.05 ])
+    countpos [item[0]]  =  np.array([ item[1][0], item[1][1]-0.10 ])
 
-    count.append(u.poplen)
-    fit.append(u.avg_fitness)
-    brate.append(u.brate)
+alls_dict   =  {}
+count_dict  =  {}
+
+for record in u.phenotypeHM.items():
+    alls_dict [record[0]]  =  str(record[1]['a'])
+    count_dict[record[0]]  =  str(record[1]['n'])
+
+nx.draw_networkx_labels(G, hashpos, font_size=8)
+nx.draw_networkx_labels(G, allspos,  alls_dict, font_size=8)
+nx.draw_networkx_labels(G, countpos, count_dict, font_size=10, font_color="blue")
 
 
-    if SHIFTING_FITNESS_PEAK:
-        lsc= np.append(lsc, mean)
 
-    if (not (it + 1 )  & (COUNTER_RESET -1 ) ) and SHIFTING_FITNESS_PEAK:        #! Correlated
-        if SHIFTING_FITNESS_PEAK == 1:
-            if np.max(mean) > 0.9:
-                LANDSCAPE_INCREMENT    =  -0.5
-                mean += LANDSCAPE_INCREMENT
-            elif np.max(mean) < -0.9:
-                LANDSCAPE_INCREMENT    =  0.5
-                mean += LANDSCAPE_INCREMENT
-            else:
-                coin      = np.random.choice([-1,1 ])
-                mean[0:] += coin*LANDSCAPE_INCREMENT
+nodealphas  =  []
+nodesize    =  []
+for node in G.nodes:
+    nodealphas.append(u.phenotypeHM[node]['n']/u.poplen)
+    nodesize.append(100*u.phenotypeHM[node]['n']/u.poplen)
+
+
+nodes  =  nx.draw_networkx_nodes(
+G, 
+pos, 
+# alpha=nodealphas,
+node_size=nodesize, 
+node_color="blue",
+label=False)
+
+edges = nx.draw_networkx_edges(
+    G,
+    pos,
+    arrowstyle="->",
+    arrowsize=10,
+    # alpha=nodealphas,
+    edge_color="black",
+    width=1,
+)
+plt.title('Simulation Phylogeny tentative')
+plt.show()
+
+# u.tick(V=VERBOSE)
+# from pprint import pprint
+# pprint(u.phenotypeHM)
+
+# for it in range(itern):
+
+#     if u.poplen == 0:
+#         EXTINCTION = True
+#         break
+
+#     count.append(u.poplen)
+#     fit.append(u.avg_fitness)
+#     brate.append(u.brate)
+
+
+#     if SHIFTING_FITNESS_PEAK:
+#         lsc= np.append(lsc, mean)
+
+#     if (not (it + 1 )  & (COUNTER_RESET -1 ) ) and SHIFTING_FITNESS_PEAK:        #! Correlated
+#         if SHIFTING_FITNESS_PEAK == 1:
+#             if np.max(mean) > 0.9:
+#                 LANDSCAPE_INCREMENT    =  -0.5
+#                 mean += LANDSCAPE_INCREMENT
+#             elif np.max(mean) < -0.9:
+#                 LANDSCAPE_INCREMENT    =  0.5
+#                 mean += LANDSCAPE_INCREMENT
+#             else:
+#                 coin      = np.random.choice([-1,1 ])
+#                 mean[0:] += coin*LANDSCAPE_INCREMENT
             
-        else:
-            for i,x in enumerate(mean):
-                if abs(x) == 1:
-                    mean[i] += -mean[i]/2
-                else:
-                    mean[i] += np.random.choice([0.5,-0.5])
+#         else:
+#             for i,x in enumerate(mean):
+#                 if abs(x) == 1:
+#                     mean[i] += -mean[i]/2
+#                 else:
+#                     mean[i] += np.random.choice([0.5,-0.5])
 
-        u.Fitmap.mean=mean
-    u.tick()
-
-
-if SHIFTING_FITNESS_PEAK:
-    lsc = np.reshape(lsc, (-1,4))
-[count,fit,brate]=[*map(lambda x: np.around(x,5), [count,fit,brate])]
-data = pd.DataFrame({
-    f"t{INDTYPE}"  :  count,
-      "fit"        :  fit,
-      "brate"      :  brate,
-})
+#         u.Fitmap.mean=mean
+#     u.tick()
 
 
-if toplot:
-    tcolors = ['black','blue','green','black','black','black','pink']
-    time = np.arange(len(fit))
-    figur, axarr = plt.subplots(2,2)
-    axarr[0,0].plot(time, count, label="Type {}".format(INDTYPE), color=tcolors[INDTYPE])
-    axarr[0,0].set_ylabel('Individual Count')
-    axarr[0,1].plot(time, fit, label="Fitness")
-    axarr[0,1].set_ylabel('Populationwide Fitness')
-    axarr[1,1].plot(time, brate, label="Birthrate")
-    axarr[1,1].set_ylabel('Birthrate')
+# if SHIFTING_FITNESS_PEAK:
+#     lsc = np.reshape(lsc, (-1,4))
+# [count,fit,brate]=[*map(lambda x: np.around(x,5), [count,fit,brate])]
+# data = pd.DataFrame({
+#     f"t{INDTYPE}"  :  count,
+#       "fit"        :  fit,
+#       "brate"      :  brate,
+# })
 
 
-    if SHIFTING_FITNESS_PEAK:
-        time2= np.arange(len(lsc[:,0]))
-        axarr[1,0].plot(time2,lsc[:,0], label="Mean 1", c="cyan")
-        axarr[1,0].plot(time2,lsc[:,1], label="Mean 2", c="black")
-        axarr[1,0].plot(time2,lsc[:,2], label="Mean 3", c="brown")
-        axarr[1,0].plot(time2,lsc[:,3], label="Mean 4", c="yellow")
-        axarr[1,0].plot([],[], label="Landscape {}".format("Correlated" if SHIFTING_FITNESS_PEAK>0 else "Uncorrelated"),c="black")
-        axarr[1,0].legend()
+# if toplot:
+#     tcolors = ['black','blue','green','black','black','black','pink']
+#     time = np.arange(len(fit))
+#     figur, axarr = plt.subplots(2,2)
+#     axarr[0,0].plot(time, count, label="Type {}".format(INDTYPE), color=tcolors[INDTYPE])
+#     axarr[0,0].set_ylabel('Individual Count')
+#     axarr[0,1].plot(time, fit, label="Fitness")
+#     axarr[0,1].set_ylabel('Populationwide Fitness')
+#     axarr[1,1].plot(time, brate, label="Birthrate")
+#     axarr[1,1].set_ylabel('Birthrate')
 
-    if CONNECTIVITY_FLAG:
-        time2 = np.arange(len(cnt))
-        axarr[1,0].plot(time2, cnt,'-', label="T1 Connectivity",c='blue')
-        axarr[1,0].plot(time2, rcpt,'-', label="T1 Receptivity",c='lightblue')
-        axarr[1,0].plot([],[],'*', label="(Every 100 iterations)")
-        axarr[1,0].set_ylabel('Connectivity')
-        axarr[1,0].legend()
 
-    if EXTINCTION:
-        axarr[0,0].scatter(time[-1], 0, marker='H', s=50)
-        axarr[0,0].text(time[-1]+0.15, 0+0.15, s="EXTINCTION")
+#     if SHIFTING_FITNESS_PEAK:
+#         time2= np.arange(len(lsc[:,0]))
+#         axarr[1,0].plot(time2,lsc[:,0], label="Mean 1", c="cyan")
+#         axarr[1,0].plot(time2,lsc[:,1], label="Mean 2", c="black")
+#         axarr[1,0].plot(time2,lsc[:,2], label="Mean 3", c="brown")
+#         axarr[1,0].plot(time2,lsc[:,3], label="Mean 4", c="yellow")
+#         axarr[1,0].plot([],[], label="Landscape {}".format("Correlated" if SHIFTING_FITNESS_PEAK>0 else "Uncorrelated"),c="black")
+#         axarr[1,0].legend()
 
-    figure = plt.gcf()
-    figure.suptitle("Experiment {}".format(EXPERIMENT))
-    figure.set_size_inches(12, 6)
-    figure.text(0.5, 0.04, 'BD Process Iteration', ha='center', va='center')
-    plt.show()
+#     if CONNECTIVITY_FLAG:
+#         time2 = np.arange(len(cnt))
+#         axarr[1,0].plot(time2, cnt,'-', label="T1 Connectivity",c='blue')
+#         axarr[1,0].plot(time2, rcpt,'-', label="T1 Receptivity",c='lightblue')
+#         axarr[1,0].plot([],[],'*', label="(Every 100 iterations)")
+#         axarr[1,0].set_ylabel('Connectivity')
+#         axarr[1,0].legend()
+
+#     if EXTINCTION:
+#         axarr[0,0].scatter(time[-1], 0, marker='H', s=50)
+#         axarr[0,0].text(time[-1]+0.15, 0+0.15, s="EXTINCTION")
+
+#     figure = plt.gcf()
+#     figure.suptitle("Experiment {}".format(EXPERIMENT))
+#     figure.set_size_inches(12, 6)
+#     figure.text(0.5, 0.04, 'BD Process Iteration', ha='center', va='center')
+#     plt.show()
 
