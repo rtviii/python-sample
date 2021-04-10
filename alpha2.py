@@ -54,18 +54,17 @@ SHIFTING_FITNESS_PEAK         =  args.shifting_peak if args.shifting_peak is not
 CONNECTIVITY_FLAG             =  args.connectivity if args.connectivity is not None else False
 CON_SPARSE                    =  1000
 MUTATION_RATE_ALLELE          =  0.0001
-MUTATION_VARIANTS_ALLELE      =  np.arange(-1,1,0.01)
+MUTATION_VARIANTS_ALLELE      =  np.arange(-1,1,0.05)
 MUTATION_RATE_DUPLICATION     =  0
 MUTATION_RATE_CONTRIB_CHANGE  =  0
 DEGREE                        =  1
 BRATE_DENOM                   =  0.001
 COUNTER_RESET                 =  1024*8
-STD                           =  0.5
+STD                           =  0.4
 AMPLITUDE                     =  1
 LANDSCAPE_INCREMENT           =  0.5
 
 INDIVIDUAL_INITS     =  {   
-
    "1":{
         'trait_n' :4,
         'alleles'       :  np.array([1,1,1,1], dtype=np.float64),
@@ -77,24 +76,176 @@ INDIVIDUAL_INITS     =  {
                     ], dtype=np.float64)
    },
    "2":{
-       'trait_n':4,
-        'alleles'       :  np.array([1,0,0,1,0,0,1,0,0,1,0,0], dtype=np.float64),
+        'trait_n' :4,
+        'alleles'       :  np.array([1,1,1,1], dtype=np.float64),
         'coefficients'  :  np.array([
-                        [1,1,1,0,0,0,0,0,0,0,0,0],
-                        [0,0,0,1,1,1,0,0,0,0,0,0],
-                        [0,0,0,0,0,0,1,1,1,0,0,0],
-                        [0,0,0,0,0,0,0,0,0,1,1,1],
-                    ],dtype=np.float64)
+                        [1,0,0,0],
+                        [0,1,0,0],
+                        [0,0,1,0],
+                        [0,0,0,1],
+                    ], dtype=np.float64) * np.array([-1,-1,1,1])
    },
-   "6":{
-       "trait_n"          :  4,
+   "3":{
+        'trait_n' :4,
         'alleles'       :  np.array([1,1], dtype=np.float64),
         'coefficients'  :  np.array([
-                            [1,0],
-                            [1,0],
-                            [0,1],
-                            [0,1],
-                            ],dtype=np.float64)}
+                        [1,0],
+                        [1,0],
+                        [0,1],
+                        [0,1],
+                    ], dtype=np.float64) 
+   },
+   "4":{
+        'trait_n' :4,
+        'alleles'       :  np.array([1,1], dtype=np.float64),
+        'coefficients'  :  np.array([
+                        [1,0],
+                        [1,0],
+                        [0,1],
+                        [0,1],
+                    ], dtype=np.float64) *np.array([1,1,-1,-1])[:,None]
+   },
+   "5":{
+        'trait_n' :4,
+        'alleles'       :  np.array([1,1], dtype=np.float64),
+        'coefficients'  :  np.array([
+                        [1,0],
+                        [1,0],
+                        [0,1],
+                        [0,1],
+                    ], dtype=np.float64) *np.array([-1,1,-1,1])[:,None]
+   },
+   "6":{
+        'trait_n' :4,
+        'alleles'       :  np.array([1,1,1,1], dtype=np.float64),
+        'coefficients'  :  np.array([
+                        [1,1,0,0],
+                        [1,1,0,0],
+                        [0,0,1,1],
+                        [0,0,1,1],
+                    ], dtype=np.float64) * np.array([1,1,1,1])
+   },
+   "7":{
+        'trait_n' :4,
+        'alleles'       :  np.array([1,1,1,1], dtype=np.float64),
+        'coefficients'  :  np.array([
+                        [1,1,0,0],
+                        [1,1,0,0],
+                        [0,0,1,1],
+                        [0,0,1,1],
+                    ], dtype=np.float64) * np.array([1,1,-1,-1])
+   },
+
+   "8":{
+        'trait_n' :4,
+        'alleles'       :  np.array([1,1,1,1], dtype=np.float64),
+        'coefficients'  :  np.array([
+                        [1,1,0,0],
+                        [1,1,0,0],
+                        [0,0,1,1],
+                        [0,0,1,1],
+                    ], dtype=np.float64) * np.array([-1,1,-1,1])[:,None]
+   },
+   "9":{
+        'trait_n' :4,
+        'alleles'       :  np.array([1,1,1,1], dtype=np.float64),
+        'coefficients'  :  np.array([
+                        [1,1,0,0],
+                        [1,1,0,0],
+                        [0,0,1,1],
+                        [0,0,1,1],
+                    ], dtype=np.float64) * np.array([1,-1,1,-1])
+   },
+   "10":{
+        'trait_n' :4,
+        'alleles'       :  np.array([1,1,1,1], dtype=np.float64),
+        'coefficients'  :  np.array([
+                        [1,1,0,0],
+                        [0,1,0,0],
+                        [0,0,1,1],
+                        [1,0,1,1],
+                    ], dtype=np.float64) 
+   },
+   "11":{
+        'trait_n' :4,
+        'alleles'       :  np.array([1,1,1,1], dtype=np.float64),
+        'coefficients'  :  np.array([
+                        [1,1,0,0],
+                        [0,1,0,0],
+                        [0,0,-1,-1],
+                        [1,0,-1,-1],
+                    ], dtype=np.float64) 
+   },
+   "12":{
+        'trait_n'       :  4,
+        'alleles'       :  np.array([1,1,1,1], dtype=np.float64),
+        'coefficients'  :  np.array([
+                        [-1,-1, 0,  0],
+                        [0, 1, 0,  0],
+                        [0, 0,  -1, -1],
+                        [1, 0,  1,  1],
+                    ], dtype=np.float64) 
+   },
+   "13":{
+        'trait_n'       :  4,
+        'alleles'       :  np.array([1,1,1,1], dtype=np.float64),
+        'coefficients'  :  np.array([
+                        [1,1,0,0],
+                        [0,1,1,0],
+                        [0,0,1,1],
+                        [1,0,0,1],
+                    ], dtype=np.float64) 
+   },
+   "14":{
+        'trait_n'       :  4,
+        'alleles'       :  np.array([1,1,1,1], dtype=np.float64),
+        'coefficients'  :  np.array([
+                        [1,1,0,0],
+                        [0,1,1,0],
+                        [0,0,1,1],
+                        [1,0,0,1],
+                    ], dtype=np.float64) * np.array([1,1,-1,-1])
+   },
+   "15":{
+        'trait_n'       :  4,
+        'alleles'       :  np.array([1,1,1,1], dtype=np.float64),
+        'coefficients'  :  np.array([
+                        [-1,-1,0,0],
+                        [0,1,-1,0],
+                        [0,0,1,-1],
+                        [1,0,0,1],
+                    ], dtype=np.float64) 
+   },
+   "16":{
+        'trait_n'       :  4,
+        'alleles'       :  np.array([1,1,1,1], dtype=np.float64),
+        'coefficients'  :  np.array([
+                        [1,1,1,1],
+                        [1,1,1,1],
+                        [1,1,1,1],
+                        [1,1,1,1],
+                    ], dtype=np.float64) 
+   },
+   "17":{
+        'trait_n'       :  4,
+        'alleles'       :  np.array([1,1,1,1], dtype=np.float64),
+        'coefficients'  :  np.array([
+                        [1,1,1,1],
+                        [1,1,1,1],
+                        [1,1,1,1],
+                        [1,1,1,1],
+                    ], dtype=np.float64) * np.array([-1,-1,1,1])
+   },
+   "18":{
+        'trait_n'       :  4,
+        'alleles'       :  np.array([1,1,1,1], dtype=np.float64),
+        'coefficients'  :  np.array([
+                        [1,1,1,1],
+                        [1,1,1,1],
+                        [1,1,1,1],
+                        [1,1,1,1],
+                    ], dtype=np.float64) * np.array([-1,1,-1,1]) * np.array([-1,1,-1,1])[:,None]
+   },
 }
 
 
@@ -154,6 +305,7 @@ class Individual:
         return nascent
 
 class Universe:
+
     def __init__(self, initial_population:List[Individual], GPMap:GPMap,Fitmap:Fitmap) -> None:
         self.population   =  []
         self.GPMap        =  GPMap
@@ -187,33 +339,39 @@ class Universe:
         self.avg_fitness   =  self.get_avg_fitness()
         self.brate         =  ( self.avg_fitness )/( self.avg_fitness + self.poplen * BRATE_DENOM)
         self.drate         =  1 - self.brate
-
-        pick =  np.random.choice([1, -1], p=[self.brate, self.drate])
+        pick               =  np.random.choice([1, -1], p=[self.brate, self.drate])
 
         def pick_genotype():
+
             genotypes      =  self.phenotypeHM.values()
             total_fitness  =  reduce(lambda t,h: t+h ,[*map(lambda x: x['n']*x['f'], genotypes)])
             targets        =  [ self._hashalls(gtp['a'])           for gtp in    genotypes]
-            likelihoods    =  [gtp['n']*gtp['f']/total_fitness     for gtp in    genotypes]
-            picked = np.random.choice(targets,p=likelihoods)
+            likelihoods    =  [ gtp['n']*gtp['f']/total_fitness    for gtp in    genotypes]
+            picked         =  np.random.choice(targets,p=likelihoods)
 
             if VERBOSE :
-                print("Targets: \t", targets)
-                print("Likelihoods: \t",likelihoods)
-                print("Picked:\t",picked)
+
+                print("\n------------")
+                print("Targets:             \t", targets)
+                print("Likelihoods:         \t",likelihoods)
+                print("Picked:              \t",picked)
+                print("------------")
+
             return self.phenotypeHM[picked]['a']
 
         if pick > 0:  
-            chosen_alleles = pick_genotype()
-            u.birth(Individual(chosen_alleles,1).give_birth())
+            u.birth(Individual(pick_genotype(),1).give_birth())
         else:
             chosen = np.random.choice(self.population)
             u.death(chosen)
 
     def death(self,_:Individual):
-        self.phenotypeHM[self._hashalls(_.alleles)]['n']-=1
-        if self.phenotypeHM[self._hashalls(_.alleles)]['n'] == 0:
-            self.phenotypeHM.pop(self._hashalls(_.alleles))
+
+        i_hash = self._hashalls(_.alleles)
+        self.phenotypeHM[i_hash]['n'] -= 1
+        if self.phenotypeHM[i_hash]['n'] == 0:
+            self.phenotypeHM.pop(i_hash)
+
         self.population.remove(_)
         self.poplen-=1
 
@@ -239,6 +397,7 @@ class Universe:
             self.poplen+=1
             
     def get_fitness(self,ind:Individual) -> float:
+
         K                 =  xxhash.xxh64(np.array2string(ind.alleles)).hexdigest()
         if K in self.phenotypeHM:
             return self.phenotypeHM[K]['f']
@@ -258,22 +417,18 @@ if CONNECTIVITY_FLAG:
     cnt   =  []
     rcpt  =  []
 
-
 mean         =  np.array([0.0,0.0,0.0,0.0], dtype=np.float64)
 ASYM_SWITCH  =  False
 EXTINCTION   =  False
 
 
-
-
-gpm1  =  GPMap(INDIVIDUAL_INITS['1']['coefficients'])
+gpm1  =  GPMap(INDIVIDUAL_INITS[str(INDTYPE)]['coefficients'])
 ftm   =  Fitmap(1,1,[0,0,0,0])
-ind1  =  Individual(INDIVIDUAL_INITS['1']['alleles'], 1)
+ind1  =  Individual(INDIVIDUAL_INITS[str(INDTYPE)]['alleles'], INDTYPE)
 u     =  Universe([ind1]*400,gpm1,ftm)
 
 
 for it in range(itern):
-
     if u.poplen == 0:
         EXTINCTION = True
         break
@@ -281,7 +436,6 @@ for it in range(itern):
     count.append(u.poplen)
     fit.append(u.avg_fitness)
     brate.append(u.brate)
-
 
     if SHIFTING_FITNESS_PEAK:
         lsc= np.append(lsc, mean)
@@ -308,6 +462,7 @@ for it in range(itern):
         u.Fitmap.mean=mean
     u.tick()
 
+pprint(u.phenotypeHM)
 
 if SHIFTING_FITNESS_PEAK:
     lsc = np.reshape(lsc, (-1,4))
