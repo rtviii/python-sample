@@ -437,9 +437,6 @@ for it in range(itern):
         population_proper.fitmap.mean = mean
     population_proper.birth_death_event(it)
 
-if SHIFTING_FITNESS_PEAK:
-    lsc = np.reshape(lsc, (-1,4))
-
 [count,fit,brate]=[*map(lambda x: np.around(x,5), [count,fit,brate])]
 
 data = pd.DataFrame({
@@ -448,6 +445,7 @@ data = pd.DataFrame({
       "brate"      :  brate,
 })
 if SHIFTING_FITNESS_PEAK:
+    lsc = np.reshape(lsc, (-1,4))
     data['mean0'] = lsc[:,0]
     data['mean1'] = lsc[:,1]
     data['mean2'] = lsc[:,2]

@@ -2,7 +2,6 @@ from __future__ import annotations
 from functools import reduce 
 import functools
 from operator import xor
-from pprint import pprint
 import xxhash
 import csv
 import sys, os
@@ -11,7 +10,6 @@ from typing import  Callable, List, Tuple
 import math
 import argparse
 import pandas as pd
-import matplotlib.pyplot as plt
 
 VERBOSE = False
 
@@ -45,16 +43,16 @@ args      =  parser.parse_args()
 itern     =  int(args.itern if args.itern is not None else 0)
 instance  =  int(args.siminst if args.siminst is not None else 0)
 toplot    =  bool(args.toplot if args.toplot is not None else 0)
-outdir    =  args.outdir if args.toplot is not None else 0
+outdir    =  args.outdir if args.outdir is not None else 0
+
 
 INDTYPE                       =  args.type
 EXPERIMENT                    =  args.experiment if args.experiment is not None else "Unspecified"
 VERBOSE                       =  True if args.verbose is not None and args.verbose !=0 else False
 SHIFTING_FITNESS_PEAK         =  args.shifting_peak if args.shifting_peak is not None else False
 CONNECTIVITY_FLAG             =  args.connectivity if args.connectivity is not None else False
-CON_SPARSE                    =  1000
 MUTATION_RATE_ALLELE          =  0.0001
-MUTATION_VARIANTS_ALLELE      =  np.arange(-1,1,0.05)
+MUTATION_VARIANTS_ALLELE      =  np.arange(-1,1,0.1)
 MUTATION_RATE_DUPLICATION     =  0
 MUTATION_RATE_CONTRIB_CHANGE  =  0
 DEGREE                        =  1
@@ -63,7 +61,6 @@ COUNTER_RESET                 =  1024*8
 STD                           =  0.4
 AMPLITUDE                     =  1
 LANDSCAPE_INCREMENT           =  0.5
-
 INDIVIDUAL_INITS     =  {   
    "1":{
         'trait_n' :4,
@@ -246,9 +243,188 @@ INDIVIDUAL_INITS     =  {
                         [1,1,1,1],
                     ], dtype=np.float64) * np.array([-1,1,-1,1]) * np.array([-1,1,-1,1])[:,None]
    },
+   "19":{
+        'trait_n' :4,
+        'alleles'       :  np.array([1,1,1,1], dtype=np.float64),
+        'coefficients'  :  np.array([
+                        [1,0,0,0],
+                        [0,1,0,0],
+                        [0,0,1,0],
+                        [0,0,0,1],
+                    ], dtype=np.float64)
+   },
+   "20":{
+        'trait_n' :4,
+        'alleles'       :  np.array([1,1,1,1], dtype=np.float64),
+        'coefficients'  :  np.array([
+                        [1,0,0,0],
+                        [0,1,0,0],
+                        [0,0,1,0],
+                        [0,0,0,1],
+                    ], dtype=np.float64) * np.array([-1,-1,1,1])
+   },
+   "21":{
+        'trait_n' :4,
+        'alleles'       :  np.array([1,1], dtype=np.float64),
+        'coefficients'  :  np.array([
+                        [1,0],
+                        [1,0],
+                        [0,1],
+                        [0,1],
+                    ], dtype=np.float64) 
+   },
+   "22":{
+        'trait_n' :4,
+        'alleles'       :  np.array([1,1], dtype=np.float64),
+        'coefficients'  :  np.array([
+                        [1,0],
+                        [1,0],
+                        [0,1],
+                        [0,1],
+                    ], dtype=np.float64) *np.array([1,1,-1,-1])[:,None]
+   },
+   "23":{
+        'trait_n' :4,
+        'alleles'       :  np.array([1,1], dtype=np.float64),
+        'coefficients'  :  np.array([
+                        [1,0],
+                        [1,0],
+                        [0,1],
+                        [0,1],
+                    ], dtype=np.float64) *np.array([-1,1,-1,1])[:,None]
+   },
+   "24":{
+        'trait_n' :4,
+        'alleles'       :  np.array([1,1,1,1], dtype=np.float64),
+        'coefficients'  :  np.array([
+                        [1,1,0,0],
+                        [1,1,0,0],
+                        [0,0,1,1],
+                        [0,0,1,1],
+                    ], dtype=np.float64) * np.array([1,1,1,1])
+   },
+   "25":{
+        'trait_n' :4,
+        'alleles'       :  np.array([1,1,1,1], dtype=np.float64),
+        'coefficients'  :  np.array([
+                        [1,1,0,0],
+                        [1,1,0,0],
+                        [0,0,1,1],
+                        [0,0,1,1],
+                    ], dtype=np.float64) * np.array([1,1,-1,-1])
+   },
+
+   "26":{
+        'trait_n' :4,
+        'alleles'       :  np.array([1,1,1,1], dtype=np.float64),
+        'coefficients'  :  np.array([
+                        [1,1,0,0],
+                        [1,1,0,0],
+                        [0,0,1,1],
+                        [0,0,1,1],
+                    ], dtype=np.float64) * np.array([-1,1,-1,1])[:,None]
+   },
+   "27":{
+        'trait_n' :4,
+        'alleles'       :  np.array([1,1,1,1], dtype=np.float64),
+        'coefficients'  :  np.array([
+                        [1,1,0,0],
+                        [1,1,0,0],
+                        [0,0,1,1],
+                        [0,0,1,1],
+                    ], dtype=np.float64) * np.array([1,-1,1,-1])
+   },
+   "28":{
+        'trait_n' :4,
+        'alleles'       :  np.array([1,1,1,1], dtype=np.float64),
+        'coefficients'  :  np.array([
+                        [1,1,0,0],
+                        [0,1,0,0],
+                        [0,0,1,1],
+                        [1,0,1,1],
+                    ], dtype=np.float64) 
+   },
+   "29":{
+        'trait_n' :4,
+        'alleles'       :  np.array([1,1,1,1], dtype=np.float64),
+        'coefficients'  :  np.array([
+                        [1,1,0,0],
+                        [0,1,0,0],
+                        [0,0,-1,-1],
+                        [1,0,-1,-1],
+                    ], dtype=np.float64) 
+   },
+   "30":{
+        'trait_n'       :  4,
+        'alleles'       :  np.array([1,1,1,1], dtype=np.float64),
+        'coefficients'  :  np.array([
+                        [-1,-1, 0,  0],
+                        [0, 1, 0,  0],
+                        [0, 0,  -1, -1],
+                        [1, 0,  1,  1],
+                    ], dtype=np.float64) 
+   },
+   "31":{
+        'trait_n'       :  4,
+        'alleles'       :  np.array([1,1,1,1], dtype=np.float64),
+        'coefficients'  :  np.array([
+                        [1,1,0,0],
+                        [0,1,1,0],
+                        [0,0,1,1],
+                        [1,0,0,1],
+                    ], dtype=np.float64) 
+   },
+   "32":{
+        'trait_n'       :  4,
+        'alleles'       :  np.array([1,1,1,1], dtype=np.float64),
+        'coefficients'  :  np.array([
+                        [1,1,0,0],
+                        [0,1,1,0],
+                        [0,0,1,1],
+                        [1,0,0,1],
+                    ], dtype=np.float64) * np.array([1,1,-1,-1])
+   },
+   "33":{
+        'trait_n'       :  4,
+        'alleles'       :  np.array([1,1,1,1], dtype=np.float64),
+        'coefficients'  :  np.array([
+                        [-1,-1,0,0],
+                        [0,1,-1,0],
+                        [0,0,1,-1],
+                        [1,0,0,1],
+                    ], dtype=np.float64) 
+   },
+   "34":{
+        'trait_n'       :  4,
+        'alleles'       :  np.array([1,1,1,1], dtype=np.float64),
+        'coefficients'  :  np.array([
+                        [1,1,1,1],
+                        [1,1,1,1],
+                        [1,1,1,1],
+                        [1,1,1,1],
+                    ], dtype=np.float64) 
+   },
+   "35":{
+        'trait_n'       :  4,
+        'alleles'       :  np.array([1,1,1,1], dtype=np.float64),
+        'coefficients'  :  np.array([
+                        [1,1,1,1],
+                        [1,1,1,1],
+                        [1,1,1,1],
+                        [1,1,1,1],
+                    ], dtype=np.float64) * np.array([-1,-1,1,1])
+   },
+   "36":{
+        'trait_n'       :  4,
+        'alleles'       :  np.array([1,1,1,1], dtype=np.float64),
+        'coefficients'  :  np.array([
+                        [1,1,1,1],
+                        [1,1,1,1],
+                        [1,1,1,1],
+                        [1,1,1,1],
+                    ], dtype=np.float64) * np.array([-1,1,-1,1]) * np.array([-1,1,-1,1])[:,None]
+   },
 }
-
-
 
 class Fitmap():
     def __init__(self,std:float, amplitude:float, mean):
@@ -440,7 +616,7 @@ for it in range(itern):
     if SHIFTING_FITNESS_PEAK:
         lsc= np.append(lsc, mean)
 
-    if (not (it + 1 )  & (COUNTER_RESET -1 ) ) and SHIFTING_FITNESS_PEAK:        #! Correlated
+    if (not (it + 1 )  & (COUNTER_RESET -1 ) ) and SHIFTING_FITNESS_PEAK:        
         if SHIFTING_FITNESS_PEAK == 1:
             if np.max(mean) > 0.9:
                 LANDSCAPE_INCREMENT    =  -0.5
@@ -451,65 +627,32 @@ for it in range(itern):
             else:
                 coin      = np.random.choice([-1,1 ])
                 mean[0:] += coin*LANDSCAPE_INCREMENT
-            
         else:
             for i,x in enumerate(mean):
                 if abs(x) == 1:
                     mean[i] += -mean[i]/2
                 else:
                     mean[i] += np.random.choice([0.5,-0.5])
-
         u.Fitmap.mean=mean
     u.tick()
 
-pprint(u.phenotypeHM)
+exp ="exp{}".format(INDTYPE)
 
-if SHIFTING_FITNESS_PEAK:
+if outdir:
+
     lsc = np.reshape(lsc, (-1,4))
-[count,fit,brate]=[*map(lambda x: np.around(x,5), [count,fit,brate])]
-data = pd.DataFrame({
-    f"t{INDTYPE}"  :  count,
-      "fit"        :  fit,
-      "brate"      :  brate,
-})
+    data = pd.DataFrame({
+        f"t{INDTYPE}"  :  count,
+        "fit"        :  fit,
+        "brate"      :  brate,
+        "mean0"      :  lsc[:,0],
+        "mean1"      :  lsc[:,1],
+        "mean2"      :  lsc[:,2],
+        "mean3"      :  lsc[:,3],
+    })
 
+    [count,fit,brate]=[*map(lambda x: np.around(x,5), [count,fit,brate])]
+    os.makedirs(os.path.join(outdir,exp), exist_ok=True)
+    data.to_parquet(os.path.join(outdir,exp,f'data{instance}.parquet'))
 
-if toplot:
-    tcolors = ['black','blue','green','black','black','black','pink']
-    time = np.arange(len(fit))
-    figur, axarr = plt.subplots(2,2)
-    axarr[0,0].plot(time, count, label="Type {}".format(INDTYPE), color=tcolors[INDTYPE])
-    axarr[0,0].set_ylabel('Individual Count')
-    axarr[0,1].plot(time, fit, label="Fitness")
-    axarr[0,1].set_ylabel('Populationwide Fitness')
-    axarr[1,1].plot(time, brate, label="Birthrate")
-    axarr[1,1].set_ylabel('Birthrate')
-
-
-    if SHIFTING_FITNESS_PEAK:
-        time2= np.arange(len(lsc[:,0]))
-        axarr[1,0].plot(time2,lsc[:,0], label="Mean 1", c="cyan")
-        axarr[1,0].plot(time2,lsc[:,1], label="Mean 2", c="black")
-        axarr[1,0].plot(time2,lsc[:,2], label="Mean 3", c="brown")
-        axarr[1,0].plot(time2,lsc[:,3], label="Mean 4", c="yellow")
-        axarr[1,0].plot([],[], label="Landscape {}".format("Correlated" if SHIFTING_FITNESS_PEAK>0 else "Uncorrelated"),c="black")
-        axarr[1,0].legend()
-
-    if CONNECTIVITY_FLAG:
-        time2 = np.arange(len(cnt))
-        axarr[1,0].plot(time2, cnt,'-', label="T1 Connectivity",c='blue')
-        axarr[1,0].plot(time2, rcpt,'-', label="T1 Receptivity",c='lightblue')
-        axarr[1,0].plot([],[],'*', label="(Every 100 iterations)")
-        axarr[1,0].set_ylabel('Connectivity')
-        axarr[1,0].legend()
-
-    if EXTINCTION:
-        axarr[0,0].scatter(time[-1], 0, marker='H', s=50)
-        axarr[0,0].text(time[-1]+0.15, 0+0.15, s="EXTINCTION")
-
-    figure = plt.gcf()
-    figure.suptitle("Experiment {}".format(EXPERIMENT))
-    figure.set_size_inches(12, 6)
-    figure.text(0.5, 0.04, 'BD Process Iteration', ha='center', va='center')
-    plt.show()
 
