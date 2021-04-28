@@ -13,7 +13,6 @@ import pandas as pd
 
 VERBOSE = False
 
-
 def dir_path(string):
     if string == "0":
         return None
@@ -38,13 +37,11 @@ parser.add_argument("-exp",     "--experiment",          type=int)
 parser.add_argument('-t',       '--type',                type=int,      required=True, help='Types involved in experiment')
 parser.add_argument("-V",       "--verbose",             type=int,      choices=[0,1])
 
-
 args      =  parser.parse_args()
 itern     =  int(args.itern if args.itern is not None else 0)
 instance  =  int(args.siminst if args.siminst is not None else 0)
 toplot    =  bool(args.toplot if args.toplot is not None else 0)
 outdir    =  args.outdir if args.outdir is not None else 0
-
 
 INDTYPE                       =  args.type
 EXPERIMENT                    =  args.experiment if args.experiment is not None else "Unspecified"
@@ -56,11 +53,13 @@ MUTATION_VARIANTS_ALLELE      =  np.arange(-1,1,0.1)
 MUTATION_RATE_DUPLICATION     =  0
 MUTATION_RATE_CONTRIB_CHANGE  =  0
 DEGREE                        =  1
-BRATE_DENOM                   =  0.001
+BRATE_DENOM                   =  0.0005
 COUNTER_RESET                 =  1024*8
-STD                           =  0.4
+STD                           =  1
 AMPLITUDE                     =  1
+
 LANDSCAPE_INCREMENT           =  0.5
+
 INDIVIDUAL_INITS     =  {   
    "1":{
         'trait_n' :4,
@@ -424,7 +423,69 @@ INDIVIDUAL_INITS     =  {
                         [1,1,1,1],
                     ], dtype=np.float64) * np.array([-1,1,-1,1]) * np.array([-1,1,-1,1])[:,None]
    },
+#    ------------------------------------------------------------------------------------
+   "37":{
+        'trait_n'       :  4,
+        'alleles'       :  np.array([1,1,1,1], dtype=np.float64),
+        'coefficients'  :  np.array([
+                        [1,1,0,0],
+                        [1,-1,0,0],
+                        [0,0,1,1],
+                        [0,0,1,1],
+                    ], dtype=np.float64) 
+   },
+   "38":{
+        'trait_n'       :  4,
+        'alleles'       :  np.array([1,1,1,1], dtype=np.float64),
+        'coefficients'  :  np.array([
+                        [1,1,0,0],
+                        [0,-1,0,0],
+                        [0,0,1,1],
+                        [1,0,1,1],
+                    ], dtype=np.float64) 
+   },
+   "39":{
+        'trait_n'       :  4,
+        'alleles'       :  np.array([1,1,1,1], dtype=np.float64),
+        'coefficients'  :  np.array([
+                        [1,1,0,0],
+                        [0,-1,1,0],
+                        [0,0,1,1],
+                        [1,0,0,-1],
+                    ], dtype=np.float64) 
+   },
+   "40":{
+        'trait_n'       :  4,
+        'alleles'       :  np.array([1,1,1,1], dtype=np.float64),
+        'coefficients'  :  np.array([
+                        [1,1,0,0],
+                        [1,-1,0,0],
+                        [0,0,1,1],
+                        [0,0,1,1],
+                    ], dtype=np.float64) 
+   },
+   "41":{
+        'trait_n'       :  4,
+        'alleles'       :  np.array([1,1,1,1], dtype=np.float64),
+        'coefficients'  :  np.array([
+                        [1,1,0,0],
+                        [0,-1,0,0],
+                        [0,0,1,1],
+                        [1,0,1,1],
+                    ], dtype=np.float64) 
+   },
+   "42":{
+        'trait_n'       :  4,
+        'alleles'       :  np.array([1,1,1,1], dtype=np.float64),
+        'coefficients'  :  np.array([
+                        [1,1,0,0],
+                        [0,-1,1,0],
+                        [0,0,1,1],
+                        [1,0,0,-1],
+                    ], dtype=np.float64) 
+   },
 }
+
 
 class Fitmap():
     def __init__(self,std:float, amplitude:float, mean):
@@ -435,6 +496,7 @@ class Fitmap():
         def _(phenotype:np.ndarray):
             return self.amplitude*math.exp(-(np.sum(((phenotype - self.mean)**2)/(2*self.std**2))))
         return _
+
 
 class GPMap():
     def __init__(self,contributions:np.ndarray) -> None:
@@ -451,6 +513,7 @@ class GPMap():
         """
 
         return  np.sum(self.coeffs_mat * ( alleles ** 1), axis=1)
+
 
 class Individual:
     def __init__(self, alleles:np.ndarray, ind_type:int):
@@ -479,6 +542,7 @@ class Individual:
             # if haven't mutated -- gpmap is remains the same as parent
             nascent = Individual(self.alleles, self.ind_type)
         return nascent
+
 
 class Universe:
 
@@ -582,29 +646,27 @@ class Universe:
             fitval            =  self.Fitmap.getMap()(phenotype)
             return fitval
 
-
 count              =  []
 fit                =  []
 brate              =  []
 
 if SHIFTING_FITNESS_PEAK:
     lsc  =  np.array([], ndmin=2)
-if CONNECTIVITY_FLAG:
-    cnt   =  []
-    rcpt  =  []
+# if CONNECTIVITY_FLAG:
+#     cnt   =  []
+#     rcpt  =  []
 
 mean         =  np.array([0.0,0.0,0.0,0.0], dtype=np.float64)
 ASYM_SWITCH  =  False
 EXTINCTION   =  False
 
-
 gpm1  =  GPMap(INDIVIDUAL_INITS[str(INDTYPE)]['coefficients'])
-ftm   =  Fitmap(1,1,[0,0,0,0])
+ftm   =  Fitmap(STD,AMPLITUDE,[0,0,0,0])
 ind1  =  Individual(INDIVIDUAL_INITS[str(INDTYPE)]['alleles'], INDTYPE)
-u     =  Universe([ind1]*400,gpm1,ftm)
-
+u     =  Universe([ind1]*800,gpm1,ftm)
 
 for it in range(itern):
+    print("Poplen: {} | it {}".format(u.poplen,it))
     if u.poplen == 0:
         EXTINCTION = True
         break
@@ -654,5 +716,3 @@ if outdir:
     [count,fit,brate]=[*map(lambda x: np.around(x,5), [count,fit,brate])]
     os.makedirs(os.path.join(outdir,exp), exist_ok=True)
     data.to_parquet(os.path.join(outdir,exp,f'data{instance}.parquet'))
-
-

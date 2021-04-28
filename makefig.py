@@ -23,7 +23,8 @@ countall  =  0
 
 c = 0
 
-for file in glob.glob(f"/home/rxz/dev/polygenicity-simulations/rt/exp{exp}/*.parquet"):
+for file in glob.glob(f"/home/rxz/dev/polygenicity-simulations/{exp}/*.parquet"):
+
     print("FILE", file)
     data       =  pd.read_parquet(file)
     # print(data)
@@ -48,10 +49,6 @@ for file in glob.glob(f"/home/rxz/dev/polygenicity-simulations/rt/exp{exp}/*.par
     countall   +=  np.array( data[f't{exp}'] )
     c+=1
 
-
-
-
-
 mean0all  =  mean0all/c
 mean1all  =  mean1all/c
 mean2all  =  mean2all/c
@@ -59,7 +56,6 @@ mean3all  =  mean3all/c
 fitall    =  fitall  /c
 brateall  =  brateall/c
 countall  =  countall/c
-
 
 time    =  np.arange(len(countall))
 time    =  np.arange(len(fitall))

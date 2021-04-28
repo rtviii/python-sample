@@ -4,7 +4,7 @@ import math
 
 def fit(phenotype, nean, std):
 
-    std        = 1
+    std        = 0
     amplitude  = 1
     mean       = nean
     return amplitude*math.exp(
